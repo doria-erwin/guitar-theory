@@ -8,6 +8,11 @@ def check(cond, msg):
     print(("  ok   " if cond else "  FAIL ") + msg)
     if not cond: fails.append(msg)
 
+def nav(pg, v):
+    """Open a tab; on phone/tablet widths the tabs live behind the floating menu button."""
+    if pg.locator('.navfab').is_visible(): pg.click('.navfab')
+    pg.click(f'#nav [data-view={v}]')
+
 def run(browser_type, name, viewport, mobile, shots):
     b = browser_type.launch()
     ctx = b.new_context(viewport=viewport, is_mobile=mobile, has_touch=mobile, device_scale_factor=2 if mobile else 1)
@@ -20,7 +25,7 @@ def run(browser_type, name, viewport, mobile, shots):
     check(pg.locator('#nav .tab').count() == 15, "15 navigation tabs render")
     check(pg.eval_on_selector('[data-set=root]', 'e => e.value') != '', "root selector has a value")
     for v in VIEWS:
-        pg.click(f'#nav [data-view={v}]'); pg.wait_for_timeout(120)
+        nav(pg, v); pg.wait_for_timeout(120)
         txt = pg.inner_text('#view')
         check(len(txt) > 80 and 'undefined' not in txt and 'NaN' not in txt and 'failed to draw' not in txt, f"{v}: renders without undefined/NaN")
         # nothing in the page body may overflow horizontally (scroll containers are fine)
@@ -28,18 +33,18 @@ def run(browser_type, name, viewport, mobile, shots):
         check(ov <= 1, f"{v}: no page-wide horizontal scroll ({ov}px)")
         if shots: pg.screenshot(path=f"shots/{name}-{viewport['width']}-{v}.png", full_page=False)
     # SVG coordinates are all finite
-    pg.click('#nav [data-view=scales]'); pg.wait_for_timeout(100)
+    nav(pg, 'scales'); pg.wait_for_timeout(100)
     bad = pg.evaluate("""[...document.querySelectorAll('svg circle, svg line, svg rect, svg text')].filter(e => ['cx','cy','x','y','x1','x2','y1','y2'].some(a => e.hasAttribute(a) && !isFinite(parseFloat(e.getAttribute(a))))).length""")
     check(bad == 0, "no NaN/invalid SVG coordinates on the scales view")
     # state sync: change root, switch views, come back
     pg.select_option('[data-set=root]', 'E♭'); pg.wait_for_timeout(80)
-    pg.click('#nav [data-view=builder]'); pg.select_option('[data-set=chord]', 'm7'); pg.wait_for_timeout(80)
+    nav(pg, 'builder'); pg.select_option('[data-set=chord]', 'm7'); pg.wait_for_timeout(80)
     check('E♭m7 = E♭ – G♭ – B♭ – D♭' in pg.inner_text('.result'), "builder spells E♭m7 correctly")
-    pg.click('#nav [data-view=keys]'); pg.wait_for_timeout(80)
+    nav(pg, 'keys'); pg.wait_for_timeout(80)
     check(pg.eval_on_selector('[data-set=root]', 'e => e.value') == 'E♭', "root persists across views")
     check('3 flats' in pg.inner_text('#view'), "E♭ key shows 3 flats")
     # tuning change updates labels on the fretboard
-    pg.click('#nav [data-view=fretboard]'); pg.select_option('[data-set=fbHighlight]', 'all'); pg.select_option('[data-set=tuning]', 'dropd'); pg.wait_for_timeout(80)
+    nav(pg, 'fretboard'); pg.select_option('[data-set=fbHighlight]', 'all'); pg.select_option('[data-set=tuning]', 'dropd'); pg.wait_for_timeout(80)
     opens = pg.eval_on_selector_all('.fb-open', 'es => es.map(e => e.textContent)')
     check(opens[:6] == ['D','A','D','G','B','E'], f"drop D string labels {opens[:6]}")
     pg.select_option('[data-set=labels]', 'note'); pg.wait_for_timeout(80)
@@ -53,7 +58,7 @@ def run(browser_type, name, viewport, mobile, shots):
     check(pg.inner_text('.tun-readout').strip() == 'E A D G A E', "custom tuning applies")
     pg.select_option('[data-set=tuning]', 'std')
     # scale positions
-    pg.click('#nav [data-view=scales]'); pg.select_option('[data-set=root]', 'A'); pg.select_option('[data-set=scale]', 'minblues'); pg.wait_for_timeout(80)
+    nav(pg, 'scales'); pg.select_option('[data-set=root]', 'A'); pg.select_option('[data-set=scale]', 'minblues'); pg.wait_for_timeout(80)
     chips = pg.locator('[data-act=pos]').count()
     check(chips == 6, f"minor blues offers whole neck + 5 boxes ({chips})")
     pg.click('[data-act=pos][data-id=box0]'); pg.wait_for_timeout(80)
@@ -62,19 +67,19 @@ def run(browser_type, name, viewport, mobile, shots):
     pg.select_option('[data-set=scale]', 'major'); pg.wait_for_timeout(80)
     check(pg.locator('[data-act=pos]').count() == 13, "major offers whole neck + 7 3NPS + 5 CAGED")
     # audio start/stop
-    pg.click('#nav [data-view=rhythm]'); pg.wait_for_timeout(60)
+    nav(pg, 'rhythm'); pg.wait_for_timeout(60)
     pg.click('[data-act=metro]'); pg.wait_for_timeout(700)
     lit = pg.locator('.pulse.is-now').count()
     running = pg.evaluate("Audio.isRunning()")
     check(running and lit == 1, f"metronome runs and lights one beat (running={running}, lit={lit})")
-    pg.click('#nav [data-view=keys]'); pg.wait_for_timeout(200)
+    nav(pg, 'keys'); pg.wait_for_timeout(200)
     check(not pg.evaluate("Audio.isRunning()") and pg.evaluate("Audio._timers.size") == 0, "switching view stops metronome and clears timers")
-    pg.click('#nav [data-view=progressions]'); pg.click('[data-act=progplay]'); pg.wait_for_timeout(900)
+    nav(pg, 'progressions'); pg.click('[data-act=progplay]'); pg.wait_for_timeout(900)
     check(pg.locator('.chordtile.is-now').count() == 1, "progression highlights the current chord")
     pg.click('[data-act=progplay]'); pg.wait_for_timeout(100)
     check(not pg.evaluate("Audio.isRunning()") and pg.evaluate("Audio._live.size") == 0, "progression stop cancels all audio")
     # practice: answers not shown before responding
-    pg.click('#nav [data-view=practice]'); pg.select_option('[data-ch=pex]', 'interval'); pg.wait_for_timeout(80)
+    nav(pg, 'practice'); pg.select_option('[data-ch=pex]', 'interval'); pg.wait_for_timeout(80)
     check(pg.locator('.feedback').count() == 0 and pg.locator('.choice.is-right').count() == 0, "practice hides the answer before submission")
     pg.locator('.choice').first.click(); pg.wait_for_timeout(80)
     check(pg.locator('.feedback').count() == 1 and pg.locator('.choice.is-right').count() == 1, "practice gives feedback after answering")
@@ -83,16 +88,16 @@ def run(browser_type, name, viewport, mobile, shots):
     pg.reload(); pg.wait_for_timeout(200)
     check(pg.eval_on_selector('[data-set=root]', 'e => e.value') == 'A' and pg.locator('#nav .tab.is-on').inner_text() == 'Practice', "settings persist after reload")
     # circle of fifths tap updates key; interval calculator spells enharmonics
-    pg.click('#nav [data-view=keys]'); pg.click('.cof-seg[data-i="10"]'); pg.wait_for_timeout(80)
+    nav(pg, 'keys'); pg.click('.cof-seg[data-i="10"]'); pg.wait_for_timeout(80)
     check(pg.eval_on_selector('[data-set=root]', 'e => e.value') == 'B♭' and 'Gm' in pg.inner_text('#view') and '2 flats' in pg.inner_text('#view'), "tapping B♭ on the circle selects B♭ major (2 flats, Gm relative)")
-    pg.click('#nav [data-view=intervals]'); pg.select_option('[data-k=intA][data-part=l]', 'C'); pg.select_option('[data-k=intA][data-part=a]', '0')
+    nav(pg, 'intervals'); pg.select_option('[data-k=intA][data-part=l]', 'C'); pg.select_option('[data-k=intA][data-part=a]', '0')
     pg.select_option('[data-k=intB][data-part=l]', 'D'); pg.select_option('[data-k=intB][data-part=a]', '1'); pg.wait_for_timeout(80)
     check('Augmented 2nd' in pg.inner_text('#view'), "calculator: C to D♯ is an augmented 2nd")
     pg.select_option('[data-k=intB][data-part=l]', 'E'); pg.select_option('[data-k=intB][data-part=a]', '-1'); pg.wait_for_timeout(80)
     check('Minor 3rd' in pg.inner_text('#view'), "calculator: C to E♭ is a minor 3rd")
     pg.select_option('[data-set=root]', 'A')
     # reverse finder
-    pg.click('#nav [data-view=finder]'); pg.click('[data-act=finderpreset] >> nth=1'); pg.wait_for_timeout(80)
+    nav(pg, 'finder'); pg.click('[data-act=finderpreset] >> nth=1'); pg.wait_for_timeout(80)
     t = pg.inner_text('#view'); check('C6' in t and 'Am7' in t, "finder lists both C6 and Am7 for C E G A")
     check(len(errs) == 0, f"no console errors ({errs[:3]})")
     b.close()

@@ -17,8 +17,8 @@ Settings and practice scores are saved in the browser (localStorage). If storage
 | Tab | What it does |
 |---|---|
 | Fretboard | Frets 0–24, any tuning, all notes / root / a scale / a chord; colour by interval; tap to hear; full-screen |
-| Scales | 14 scales; formula, notes, semitones, steps, character notes, mode parent, relative key; 7 three-notes-per-string patterns, 5 CAGED positions, 5 pentatonic boxes (blues = boxes + blue note); suggested fingering; tonic-chord rings; playback |
 | Intervals | Unison to 13th, semitones, string-to-string shapes, letter-aware calculator (C–D♯ vs C–E♭) |
+| Scales | 14 scales; formula, notes, semitones, steps, character notes, mode parent, relative key; 7 three-notes-per-string patterns, 5 CAGED positions, 5 pentatonic boxes (blues = boxes + blue note); suggested fingering; tonic-chord rings; playback |
 | Chord builder | 31 chord types; the 3-step method and semitone method shown step by step; chord tones on the neck; checked voicings; formula library, degree→semitone table, same formula in all 12 keys |
 | Name a chord | Pick notes (buttons or fretboard) and a bass note; lists every matching name, slash chords, and explains ambiguity |
 | Chord shapes | Open, barre, power, 7th, extended and altered shapes with fingers, barres, mutes, roots, playback |
@@ -32,6 +32,8 @@ Settings and practice scores are saved in the browser (localStorage). If storage
 | Practice | 10 exercise types × 3 levels, instant feedback, scores, review of missed questions, reset |
 | Basics | Strings and tuning, every note frets 0–12, sharps/flats/enharmonics, tips, and a map from every cheat-sheet section to its tab |
 
+Every tab except Practice opens with a short quiz built from that tab's current selections. Example: on Intervals, pick a root and it asks where a random number of semitones up lands. Each quiz has its own question types, a score and a streak, and a Hide button.
+
 ## Source layout
 
 ```
@@ -41,6 +43,7 @@ src/render.js            SVG renderers: fretboard, chord box, circle of fifths, 
 src/app.js               state, persistence, helpers, delegated events, boot and error handling
 src/views.js, views2.js  one render function per tab
 src/practice.js          practice generators and scoring
+src/quiz.js              per-tab quiz card (questions built from each tab's current root/scale/chord)
 src/styles.css           dark and light themes
 src/index.template.html  page shell and no-JavaScript fallback
 build.js                 inlines everything into dist/index.html
