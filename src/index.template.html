@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark light">
-<meta name="theme-color" content="#0b1730">
+<meta name="theme-color" content="#16191f">
 <title>Guitar Theory Explorer</title>
 <style>
 /*CSS*/
@@ -34,6 +34,8 @@
 
 <div id="app" hidden>
   <div class="nav-bar"><nav id="nav" role="tablist" aria-label="Sections"></nav></div>
+  <div class="nav-scrim" data-act="navclose" aria-hidden="true"></div>
+  <button type="button" class="navfab" data-act="navtoggle" aria-controls="nav" aria-expanded="false"><span class="navfab-icon" aria-hidden="true"></span><span id="navfab-label">Sections</span></button>
   <div id="globals" aria-label="Global settings"></div>
   <div id="errbar" class="banner err" hidden role="alert"><span></span></div>
   <div id="audio-note" class="banner" hidden>This browser has no Web Audio support, so sound is off. Everything else works.</div>

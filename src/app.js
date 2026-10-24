@@ -20,10 +20,10 @@ const DEFAULTS = {
   chord: 'm7', voicing: 0, finder: [], finderBass: null, invChord: 'maj', inv: 0,
   arp: 'maj7', arpPos: 'all', prog: 'pop', tempo: 90, beatsPerChord: 4, loop: true, met: { sig: '4/4', sub: 1, on: false },
   intA: { n: 'C', o: 4 }, intB: { n: 'E', o: 4 }, intRow: 'M3', cof: 0,
-  practice: { ex: 'note', level: 'beginner' }
+  practice: { ex: 'note', level: 'beginner' }, quizOpen: true, quizMode: {}
 };
 const VALID = {
-  view: ['fretboard', 'scales', 'intervals', 'builder', 'finder', 'shapes', 'inversions', 'arpeggios', 'keys', 'progressions', 'rhythm', 'techniques', 'harmony', 'practice', 'basics'],
+  view: ['fretboard', 'intervals', 'scales', 'builder', 'finder', 'shapes', 'inversions', 'arpeggios', 'keys', 'progressions', 'rhythm', 'techniques', 'harmony', 'practice', 'basics'],
   labels: ['degree', 'note', 'finger', 'none'], theme: ['dark', 'light']
 };
 /* Load persisted settings, replacing anything invalid with defaults so the UI never shows undefined/NaN. */
@@ -34,6 +34,7 @@ function loadState() {
   if (!VALID.view.includes(s.view)) s.view = DEFAULTS.view;
   if (!T.ROOTS.includes(s.root)) s.root = DEFAULTS.root;
   if (!VALID.labels.includes(s.labels)) s.labels = 'degree';
+  if (saved.theme === undefined) { try { s.theme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; } catch (e) { /* keep default */ } }
   if (!VALID.theme.includes(s.theme)) s.theme = 'dark';
   if (s.tuning !== 'custom' && !T.TUNINGS.some(t => t.id === s.tuning)) s.tuning = 'std';
   try { if (!Array.isArray(s.custom) || s.custom.length !== 6) throw 0; s.custom.forEach(n => T.parseNote(n)); } catch (e) { s.custom = DEFAULTS.custom.slice(); }
@@ -46,6 +47,7 @@ function loadState() {
   s.beatsPerChord = clampInt(s.beatsPerChord, 1, 8, 4);
   if (!s.met || typeof s.met !== 'object') s.met = Object.assign({}, DEFAULTS.met);
   s.met.on = false;
+  if (!s.quizMode || typeof s.quizMode !== 'object' || Array.isArray(s.quizMode)) s.quizMode = {};
   if (!Array.isArray(s.finder)) s.finder = [];
   s.finder = s.finder.filter(x => Number.isInteger(x) && x >= 0 && x < 12);
   if (!(s.finderBass === null || (Number.isInteger(s.finderBass) && s.finder.includes(s.finderBass)))) s.finderBass = null;
@@ -114,7 +116,7 @@ function status(msg) { const el = document.getElementById('status'); if (el) el.
 
 /* ---------- Navigation & render ---------- */
 const NAV = [
-  ['fretboard', 'Fretboard'], ['scales', 'Scales'], ['intervals', 'Intervals'], ['builder', 'Chord builder'], ['finder', 'Name a chord'],
+  ['fretboard', 'Fretboard'], ['intervals', 'Intervals'], ['scales', 'Scales'], ['builder', 'Chord builder'], ['finder', 'Name a chord'],
   ['shapes', 'Chord shapes'], ['inversions', 'Inversions'], ['arpeggios', 'Arpeggios'], ['keys', 'Keys & circle'], ['progressions', 'Progressions'],
   ['rhythm', 'Rhythm'], ['techniques', 'Techniques'], ['harmony', 'Harmony'], ['practice', 'Practice'], ['basics', 'Basics']
 ];
@@ -125,6 +127,7 @@ function render(keepScroll = true) {
   const scroll = {};
   if (keepScroll) document.querySelectorAll('.fb-scroll').forEach(el => { scroll[el.id] = el.scrollLeft; });
   document.documentElement.dataset.theme = S.theme;
+  const tc = document.querySelector('meta[name=theme-color]'); if (tc) tc.content = S.theme === 'light' ? '#f2efe9' : '#16191f';
   renderChrome();
   const main = document.getElementById('view');
   const v = Views[S.view] || Views.scales;
@@ -136,6 +139,7 @@ function render(keepScroll = true) {
 function renderChrome() {
   const nav = document.getElementById('nav');
   nav.innerHTML = NAV.map(([id, label]) => `<button type="button" role="tab" aria-selected="${S.view === id}" class="tab${S.view === id ? ' is-on' : ''}" data-view="${id}">${label}</button>`).join('');
+  const fl = document.getElementById('navfab-label'); if (fl) fl.textContent = (NAV.find(x => x[0] === S.view) || NAV[1])[1];
   const on = nav.querySelector('.is-on'); if (on && on.scrollIntoView && !renderChrome.done) { on.scrollIntoView({ block: 'nearest', inline: 'center' }); renderChrome.done = true; }
   const tun = tuning();
   document.getElementById('globals').innerHTML = `
@@ -167,7 +171,7 @@ function bind() {
     const a = e.target.closest('[data-act]');
     if (a && actions[a.dataset.act]) { Audio.ensure(); actions[a.dataset.act](a, e); }
   });
-  document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-act][tabindex]')) { e.preventDefault(); e.target.dispatchEvent(new MouseEvent('click', { bubbles: true })); } if (e.key === 'Escape') { const f = document.querySelector('.fb-wrap.is-full'); if (f) f.classList.remove('is-full'); } });
+  document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-act][tabindex]')) { e.preventDefault(); e.target.dispatchEvent(new MouseEvent('click', { bubbles: true })); } if (e.key === 'Escape') { setNavOpen(false); const f = document.querySelector('.fb-wrap.is-full'); if (f) f.classList.remove('is-full'); } });
   document.addEventListener('change', e => {
     const t = e.target;
     if (t.dataset.set) { setVal(t.dataset.set, t.type === 'checkbox' ? t.checked : t.value, t.hasAttribute('data-num')); render(); return; }
@@ -178,11 +182,20 @@ function bind() {
 }
 function switchView(id) {
   if (!VALID.view.includes(id)) return;
+  setNavOpen(false);
   cleanup.forEach(fn => { try { fn(); } catch (e) { /* ignore */ } }); cleanup = [];
   Audio.stopAll(); S.met.on = false;
   S.view = id; render(false); window.scrollTo({ top: 0 });
   status('');
 }
+/* Phones and tablets: the tab bar becomes a floating button that opens the section list. */
+function setNavOpen(open) {
+  const app = document.getElementById('app'), fab = document.querySelector('.navfab'); if (!app) return;
+  app.classList.toggle('nav-open', open); if (fab) fab.setAttribute('aria-expanded', String(open));
+  if (open) { const on = document.querySelector('#nav .is-on'); if (on) on.focus({ preventScroll: true }); }
+}
+actions.navtoggle = () => setNavOpen(!document.getElementById('app').classList.contains('nav-open'));
+actions.navclose = () => setNavOpen(false);
 actions.theme = () => { S.theme = S.theme === 'dark' ? 'light' : 'dark'; render(); };
 actions['reset-settings'] = () => { Store.del('gte.settings'); S = loadState(); render(false); };
 actions.fbnote = el => {
