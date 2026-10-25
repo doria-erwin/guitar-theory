@@ -251,6 +251,33 @@ pre.tab { font: 13px/1.35 ui-monospace, "SF Mono", Menlo, Consolas, monospace; b
 .feedback.ok, p.ok { color: var(--ok); } .feedback.bad, p.bad { color: var(--bad); }
 .feedback { background: var(--panel2); }
 .score { color: var(--muted); font-size: 14px; }
+/* Learning layer */
+.learn { border: 1px solid var(--line); border-left: 3px solid var(--tone); border-radius: var(--r-sm); background: var(--panel2); margin: 8px 0 12px; font-size: 15px; }
+.learn > summary { cursor: pointer; padding: 8px 12px; list-style: none; line-height: 1.45; }
+.learn > summary::-webkit-details-marker { display: none; }
+.learn > summary::after { content: " Learn more ▾"; color: var(--tone); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.learn[open] > summary::after { content: " Less ▴"; }
+.learn-tag { display: inline-block; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--tone); margin-right: 4px; }
+.learn.is-tab { border-left-color: var(--accent); } .learn.is-tab .learn-tag, .learn.is-tab > summary::after { color: var(--accent); }
+.learn-body { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; padding: 0 12px 10px; }
+.learn-body dt { color: var(--muted); font-size: 13px; font-weight: 650; padding-top: 2px; } .learn-body dd { margin: 0; }
+@media (max-width: 560px) { .learn-body { grid-template-columns: 1fr; } .learn-body dd { margin-bottom: 6px; } }
+.learn-see { padding: 0 12px 10px; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tab-intro { margin-top: 4px; }
+.hint { background: var(--panel2); border-left: 3px solid var(--accent); padding: 8px 12px; border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.tipsec { scroll-margin-top: 72px; } .tipsec > summary { font-weight: 650; font-size: 17px; }
+.chips.order .chip b { color: var(--accent); margin-right: 2px; } .chips.order .chip:hover b { color: inherit; }
+.seq { font-variant-numeric: tabular-nums; color: var(--accent); }
+.trick { background: var(--panel2); border-radius: var(--r-sm); padding: 8px 12px; }
+.cmp, .fams { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.cmp span, .fam { display: flex; flex-direction: column; align-items: center; min-width: 58px; padding: 6px 8px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel2); }
+.cmp small, .fam small { color: var(--muted); font-size: 12px; } .cmp em, .fam em { color: var(--muted); font-style: normal; font-size: 12px; }
+.cmp span.is-alt { border-color: var(--accent); } .cmp span.is-alt small, .cmp span.is-alt b { color: var(--accent); }
+.fam small { color: var(--accent); font-weight: 700; font-size: 13px; }
+.boxes.octs { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); } .octs .octfig { padding: 6px; overflow-x: auto; }
+.tipcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; padding-left: 0; list-style: none; counter-reset: tip; }
+.tipcards li { counter-increment: tip; background: var(--panel2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; }
+.tipcards li::before { content: counter(tip); display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 8px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 12px; font-weight: 700; }
 .tq { border-color: var(--accent); }
 .tq-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .tq-head h2 { margin: 0; flex: 1 1 auto; }
@@ -405,6 +432,14 @@ pre.tab { font: 13px/1.35 ui-monospace, "SF Mono", Menlo, Consolas, monospace; b
     const numName = number === 1 ? 'unison' : number === 8 ? 'octave' : ORD(number);
     const name = (number === 1 && q === 'Perfect') ? 'Unison' : (number === 8 && q === 'Perfect') ? 'Octave' : q + ' ' + numName;
     return { number, semis, quality: q, abbr: qa + number, name, simple, compound: number > 8 };
+  }
+
+  /* Invert a simple interval within the octave: numbers add to 9, qualities swap (M↔m, A↔d, P stays), semitones add to 12. */
+  function invertInterval(iv) {
+    const i = typeof iv === 'string' ? INTERVALS.find(x => x.abbr === iv) : iv;
+    if (!i || i.semis > 12) return null;
+    const r = qualify(9 - parseDegree(i.degree).n, 12 - i.semis);
+    return INTERVALS.find(x => x.abbr === r.abbr) || Object.assign({ degree: null }, r);
   }
 
   const INTERVALS = [
@@ -903,7 +938,7 @@ pre.tab { font: 13px/1.35 ui-monospace, "SF Mono", Menlo, Consolas, monospace; b
 
   return {
     LETTERS, NAT, MAJOR_STEPS, ROOTS, SCALES, CHORDS, INTERVALS, TUNINGS, PROGRESSIONS, MAJOR_KEYS, CIRCLE, MODE_NAMES, MODE_FEEL, OPEN, MOVABLE, MAX_FRET, STRING_SETS, CAGED_MAJOR,
-    mod, parseNote, makeNote, spellWithLetter, pcName, parseDegree, degreeSemis, degreeNote, transpose, majorScale, intervalBetween, qualify, midiOf,
+    mod, parseNote, makeNote, spellWithLetter, pcName, parseDegree, degreeSemis, degreeNote, transpose, majorScale, intervalBetween, qualify, invertInterval, midiOf,
     getScale, scaleNotes, stepPattern, modeParent, getChord, chordNotes, chordSymbol, chordPcs, identifyChord, keySignature, relativeMinor, relativeMajor,
     prefersFlats, diatonicChords, progressionChords, customTuning, scalePositions, arpeggioPositions, fretboardNotes, chordVoicings, physicallyValid, detectBarre,
     inversionOrder, inversionVoicings, secondaryDominants, tritoneSub, borrowedChords, walkWindow, walkPerString
@@ -1201,7 +1236,7 @@ const DEFAULTS = {
   practice: { ex: 'note', level: 'beginner' }, quizOpen: true, quizMode: {}
 };
 const VALID = {
-  view: ['fretboard', 'intervals', 'scales', 'builder', 'finder', 'shapes', 'inversions', 'arpeggios', 'keys', 'progressions', 'rhythm', 'techniques', 'harmony', 'practice', 'basics'],
+  view: ['fretboard', 'intervals', 'scales', 'builder', 'finder', 'shapes', 'inversions', 'arpeggios', 'keys', 'progressions', 'rhythm', 'techniques', 'harmony', 'tips', 'practice', 'basics'],
   labels: ['degree', 'note', 'finger', 'none'], theme: ['dark', 'light']
 };
 /* Load persisted settings, replacing anything invalid with defaults so the UI never shows undefined/NaN. */
@@ -1296,7 +1331,7 @@ function status(msg) { const el = document.getElementById('status'); if (el) el.
 const NAV = [
   ['fretboard', 'Fretboard'], ['intervals', 'Intervals'], ['scales', 'Scales'], ['builder', 'Chord builder'], ['finder', 'Name a chord'],
   ['shapes', 'Chord shapes'], ['inversions', 'Inversions'], ['arpeggios', 'Arpeggios'], ['keys', 'Keys & circle'], ['progressions', 'Progressions'],
-  ['rhythm', 'Rhythm'], ['techniques', 'Techniques'], ['harmony', 'Harmony'], ['practice', 'Practice'], ['basics', 'Basics']
+  ['rhythm', 'Rhythm'], ['techniques', 'Techniques'], ['harmony', 'Harmony'], ['tips', 'Tips & Tricks'], ['practice', 'Practice'], ['basics', 'Basics']
 ];
 const Views = {};
 let cleanup = [];
@@ -1469,6 +1504,7 @@ Views.scales = () => {
     <div class="row"><label>Scale ${scaleSelect('scale', S.scale)}</label>
       <button class="btn" type="button" data-act="playscale">Play ${pos ? 'this position' : 'one octave'}</button>
       ${sc.descending ? `<button class="btn ghost" type="button" data-act="playscale" data-dir="down">Play descending form</button>` : ''}</div>
+    ${learn('sc-formula')}
     <dl class="facts">
       <dt>Formula</dt><dd class="formula">${sc.degrees.map(d => `<span class="${sc.char.includes(d) ? 'char' : ''}">${esc(d)}</span>`).join(' ')}</dd>
       <dt>Notes</dt><dd>${pills(notes, sc.degrees, { blue: sc.blue })}</dd>
@@ -1479,7 +1515,9 @@ Views.scales = () => {
       ${parent ? `<dt>Mode of</dt><dd>${esc(T.MODE_NAMES[sc.mode - 1])} is mode ${sc.mode} of <b>${esc(parent.name)} major</b>: same notes, but ${esc(S.root)} is home. Starting ${esc(parent.name)} major on ${esc(S.root)} is not enough to hear it; the tonal centre must be ${esc(S.root)}.</dd>` : ''}
       ${rel ? `<dt>Related key</dt><dd>${rel}</dd>` : ''}
     </dl>
+    ${parent || rel ? learn('sc-modes') : ''}
     <h3>Positions</h3>
+    ${learn('sc-positions')}
     <div class="chips" role="group" aria-label="Scale positions"><button type="button" class="chip${!pos ? ' is-on' : ''}" data-act="pos" data-id="all">Whole neck</button>
       ${kinds.map(k => `<span class="chip-group">${kindName[k]}</span>` + positions.filter(p => p.kind === k).map(p => `<button type="button" class="chip${pos === p ? ' is-on' : ''}" data-act="pos" data-id="${p.id}">${esc(p.label.replace('3NPS pattern ', '').replace('CAGED ', '').replace('Box ', ''))}</button>`).join('')).join('')}</div>
     ${pos ? `<div class="pos-head"><button class="btn ghost" type="button" data-act="posstep" data-d="-1" aria-label="Previous position">‹</button><div><b>${esc(pos.label)}</b><br><span class="muted">${esc(pos.sub)} · frets ${pos.range[0]}–${pos.range[1]}</span></div><button class="btn ghost" type="button" data-act="posstep" data-d="1" aria-label="Next position">›</button></div>` : ''}
@@ -1523,11 +1561,13 @@ Views.intervals = () => {
     ${table(['Interval', 'Symbol', 'Semitones', 'Frets on one string', `From ${esc(S.root)}`], T.INTERVALS.map(x => ({ attrs: ` class="${x.abbr === row.abbr ? 'is-sel' : ''}" data-act="introw" data-abbr="${x.abbr}" tabindex="0" role="button"`, cells: [esc(x.name), esc(x.abbr) + ' <span class="muted">(' + esc(x.degree) + ')</span>', x.semis, x.semis, esc(T.degreeNote(r, x.degree).name)] })), 'clicky')}
   `) + card(`${esc(row.name)}: ${esc(S.root)} → ${esc(target.name)}`, `
     <div class="row"><button class="btn" type="button" data-act="playint" data-a="${nearMidi(r.pc, 48)}" data-b="${nearMidi(r.pc, 48) + row.semis}">Play melodic</button><button class="btn ghost" type="button" data-act="playint" data-a="${nearMidi(r.pc, 48)}" data-b="${nearMidi(r.pc, 48) + row.semis}" data-h="1">Play together</button></div>
+    ${learn('iv-shapes')}
     <p>${row.semis} semitone${row.semis === 1 ? '' : 's'}. ${row.semis > 12 ? `Compound interval: an octave plus ${row.semis - 12}.` : ''} Shape across strings (${esc(tun.name)}):</p>
     <ul class="compact">${pairs}</ul>
     ${fretboardBlock('interval', markers, { min: 0, max: 15, fixedRange: true, spell: speller([r, target]) })}
     <p class="legend"><i class="lg root"></i>${esc(S.root)} <i class="lg tone"></i>${esc(target.name)}</p>`)
     + card('Interval calculator', `
+    ${learn('iv-calc')}
     <p class="muted">Pick two spelled notes. Enharmonic spellings give different interval names for the same sound.</p>
     <div class="row">${notePicker('intA')}<span aria-hidden="true">→</span>${notePicker('intB')}<button class="btn" type="button" data-act="playint" data-a="${T.midiOf(a, S.intA.o)}" data-b="${T.midiOf(b, S.intB.o)}">Play</button></div>
     <p class="big">${esc(a.name)}${S.intA.o} to ${esc(b.name)}${S.intB.o}: <b>${esc(res.name)}</b> (${esc(res.abbr)}, ${res.semis} semitones${res.descending ? ', descending' : ''})</p>
@@ -1575,10 +1615,10 @@ Views.builder = () => {
     <h3><span class="stepn">3</span> Apply the accidentals: ♭ lowers a half step (one fret), ♯ raises one</h3>
     <div class="tiles">${step3}</div>
     <p class="muted">Letters stay in order (one per degree), which is why ${esc(T.chordSymbol(T.parseNote('E'), '7s9'))} contains F𝄪 rather than G.</p>`)
-    + card('The semitone method', `<p class="lede">Count frets up from the root: ${c.degrees.map((d, i) => `${esc(d)} = ${sem[i]}`).join(' · ')}.</p><div class="semis">${semCells}</div>`)
+    + card('The semitone method', `${learn('ch-semis')}<p class="lede">Count frets up from the root: ${c.degrees.map((d, i) => `${esc(d)} = ${sem[i]}`).join(' · ')}.</p><div class="semis">${semCells}</div>`)
     + card(`${esc(sym)} on the fretboard`, `<div class="row"><label class="chk"><input type="checkbox" data-set="colorByInterval" ${S.colorByInterval ? 'checked' : ''}> Colour by interval</label></div>${fretboardBlock('builder', markers, { spell: speller(notes) })}${legend(S.colorByInterval)}<p class="muted">Pick one of each note on nearby strings to make your own voicing.</p>`)
-    + card('Playable voicings', voicings.length ? `<div class="boxes">${voicings.map((v, i) => voicingCard(v, r, c, i)).join('')}</div>` : `<p class="note">No stored voicing for ${esc(sym)} in ${esc(tun.name)} passes the playability check. Use the fretboard map above to build one.</p>`)
-    + card('Reference', details('Degree → semitones', table(['Degree', 'Semitones', 'Interval'], [['1', '0', 'Unison'], ['♭2 / ♭9', '1 (13)', 'Minor 2nd'], ['2 / 9', '2 (14)', 'Major 2nd'], ['♯2 / ♯9', '3 (15)', 'Augmented 2nd'], ['♭3', '3', 'Minor 3rd'], ['3', '4', 'Major 3rd'], ['4 / 11', '5 (17)', 'Perfect 4th'], ['♯4 / ♯11', '6 (18)', 'Augmented 4th'], ['♭5', '6', 'Diminished 5th'], ['5', '7', 'Perfect 5th'], ['♯5', '8', 'Augmented 5th'], ['♭6 / ♭13', '8 (20)', 'Minor 6th'], ['6 / 13', '9 (21)', 'Major 6th'], ['𝄫7', '9', 'Diminished 7th'], ['♭7', '10', 'Minor 7th'], ['7', '11', 'Major 7th']]))
+    + card('Playable voicings', learn('ch-voicings') + (voicings.length ? `<div class="boxes">${voicings.map((v, i) => voicingCard(v, r, c, i)).join('')}</div>` : `<p class="note">No stored voicing for ${esc(sym)} in ${esc(tun.name)} passes the playability check. Use the fretboard map above to build one.</p>`))
+    + card('Reference', learn('ch-formulas') + details('Degree → semitones', table(['Degree', 'Semitones', 'Interval'], [['1', '0', 'Unison'], ['♭2 / ♭9', '1 (13)', 'Minor 2nd'], ['2 / 9', '2 (14)', 'Major 2nd'], ['♯2 / ♯9', '3 (15)', 'Augmented 2nd'], ['♭3', '3', 'Minor 3rd'], ['3', '4', 'Major 3rd'], ['4 / 11', '5 (17)', 'Perfect 4th'], ['♯4 / ♯11', '6 (18)', 'Augmented 4th'], ['♭5', '6', 'Diminished 5th'], ['5', '7', 'Perfect 5th'], ['♯5', '8', 'Augmented 5th'], ['♭6 / ♭13', '8 (20)', 'Minor 6th'], ['6 / 13', '9 (21)', 'Major 6th'], ['𝄫7', '9', 'Diminished 7th'], ['♭7', '10', 'Minor 7th'], ['7', '11', 'Major 7th']]))
       + details(`Chord formula library in ${esc(S.root)}`, table(['Chord', 'Symbol', 'Formula', 'Notes'], T.CHORDS.map(x => ({ attrs: ` data-act="pickchord" data-id="${x.id}" class="${x.id === c.id ? 'is-sel' : ''}" tabindex="0" role="button"`, cells: [esc(x.name), esc(T.chordSymbol(r, x)), esc(x.degrees.join(' ')), esc(noteNames(T.chordNotes(r, x)))] })), 'clicky'), true)
       + details(`Same formula, any key: ${esc(c.name)}`, table(['Key', 'Symbol', 'Notes'], T.CIRCLE.map(k => [esc(k), esc(T.chordSymbol(k, c)), esc(noteNames(T.chordNotes(k, c)))]))));
 };
@@ -1617,6 +1657,7 @@ Views.finder = () => {
   return card('Name a chord', `
     <p class="lede">Select the notes you hear or play, either with the buttons or by tapping the fretboard. Choose a bass note to get inversions and slash chords.</p>
     <div class="notebtns" role="group" aria-label="Notes">${range0(0, 11).map(pc => `<button type="button" class="nb${sel.includes(pc) ? ' is-on' : ''}" data-act="finder" data-pc="${pc}" aria-pressed="${sel.includes(pc)}">${esc(pcLabel(pc))}</button>`).join('')}</div>
+    ${learn('fd-slash')}
     <div class="row"><label>Bass note <select data-ch="finderbass"><option value="">Lowest = root (any)</option>${sel.map(pc => `<option value="${pc}"${pc === bass ? ' selected' : ''}>${esc(pcLabel(pc))}</option>`).join('')}</select></label>
       <button class="btn ghost" type="button" data-act="finderclear">Clear</button>
       <span class="muted">Try:</span>${[['D F A C', [2, 5, 9, 0]], ['C E G A', [0, 4, 7, 9]], ['E G C', [4, 7, 0]], ['G B D F', [7, 11, 2, 5]], ['C E♭ G♭ A', [0, 3, 6, 9]]].map(([l, p]) => `<button class="btn small ghost" type="button" data-act="finderpreset" data-p="${p.join(',')}">${l}</button>`).join('')}</div>
@@ -1641,10 +1682,11 @@ Views.shapes = () => {
   return card(`${esc(T.chordSymbol(r, c))} shapes`, `
     <div class="row"><label>Chord ${chordSelect('chord', S.chord)}</label></div>
     <p class="lede">× = don’t play · ○ = open string · numbers = fingers · red = root. Every shape is checked: only chord tones, root in the bass, at most a four-fret stretch, fingers in fret order.</p>
+    ${c.id === 'pow' ? learn('sh-power') : ''}
     ${vs.length ? `<div class="boxes">${vs.map((v, i) => voicingCard(v, r, c, i)).join('')}</div>` : `<p class="note">No stored shape for this chord passes the checks in ${esc(tun.name)}.</p>`}
     ${!tuningIsStdShape() ? `<p class="note">${esc(tun.name)} changes some string intervals. Shapes that relied on the old interval were re-fretted or dropped if they became unplayable.</p>` : ''}`)
-    + card(`Barre chords in ${esc(S.root)}: slide the shape, root fret = chord name`, barre ? `<div class="boxes">${barre}</div>` : '<p class="empty">No barre shapes in this tuning.</p>')
-    + card('Open chord library (standard tuning)', `<div class="boxes">${openCards}</div>`);
+    + card(`Barre chords in ${esc(S.root)}: slide the shape, root fret = chord name`, learn('sh-barre') + (barre ? `<div class="boxes">${barre}</div>` : '<p class="empty">No barre shapes in this tuning.</p>'))
+    + card('Open chord library (standard tuning)', `${learn('sh-open')}<div class="boxes">${openCards}</div>`);
 };
 
 /* ---------- Inversions ---------- */
@@ -1673,7 +1715,7 @@ Views.inversions = () => {
     <dl class="facts"><dt>Symbol</dt><dd class="big"><b>${esc(sym)}</b></dd><dt>Bass note</dt><dd>${esc(order[0].name)} (the ${esc(degOrder[0])})</dd><dt>Order, low to high</dt><dd>${pills(order, degOrder)}</dd>
       <dt>All inversions</dt><dd>${names.slice(0, n).map((nm, i) => `${nm}: ${esc(T.inversionOrder(notes, i).map(x => x.name).join(' '))}`).join('<br>')}</dd></dl>
     <p class="muted">Same chord tones, different bass. The chord name stays ${esc(T.chordSymbol(r, c))}; slash notation shows the bass. ${n === 4 ? 'Four-note voicings on adjacent strings are shown as close or drop-2 voicings, the playable forms guitarists use.' : 'Triads are shown in close position on each set of three adjacent strings.'}</p>`)
-    + card('Voicings on adjacent string sets', cards ? `<div class="boxes">${cards}</div>` : '<p class="empty">No playable voicing found in this tuning.</p>');
+    + card('Voicings on adjacent string sets', learn('inv-voicings') + (cards ? `<div class="boxes">${cards}</div>` : '<p class="empty">No playable voicing found in this tuning.</p>'));
 };
 actions.inv = el => { S.inv = +el.dataset.i; render(); };
 actions.invcompare = () => {
@@ -1698,6 +1740,7 @@ Views.arpeggios = () => {
       <button class="btn" type="button" data-act="playarp">Play up and down</button>
       <label class="chk"><input type="checkbox" data-set="colorByInterval" ${S.colorByInterval ? 'checked' : ''}> Colour by interval</label></div>
     <dl class="facts"><dt>Formula</dt><dd class="formula">${esc(c.degrees.join(' '))}</dd><dt>Notes</dt><dd>${pills(notes, c.degrees)}</dd></dl>
+    ${learn('arp-positions')}
     <div class="chips"><button type="button" class="chip${!pos ? ' is-on' : ''}" data-act="arppos" data-id="all">Whole neck</button>${ps.map(p => `<button type="button" class="chip${p === pos ? ' is-on' : ''}" data-act="arppos" data-id="${p.id}">${esc(p.label)}</button>`).join('')}</div>
     ${pos ? `<p class="muted">${esc(pos.label)} arpeggio, ${esc(pos.sub)}: the chord tones inside the matching CAGED scale position.</p>` : ''}
     ${fretboardBlock('arp', markers, { min, max, fixedRange: !!pos, spell: speller(notes) })}${legend(S.colorByInterval)}`)
@@ -1740,7 +1783,7 @@ Views.keys = () => {
   const sigTable = (list) => table(['Key', 'Signature', 'Accidentals', 'Relative minor'], list.map(x => { const s = T.keySignature(x); return { attrs: ` data-act="setroot" data-r="${x}" tabindex="0" role="button" class="${x === majorName ? 'is-sel' : ''}"`, cells: [`<b>${esc(x)}</b>`, esc(s.text), esc(s.accidentals.join(' ') || '—'), esc(T.relativeMinor(x).name) + ' minor'] }; }), 'clicky');
   return card('Circle of fifths', `
     <div class="cof-layout"><div class="cof-wrap">${Render.circle(COF_KEYS, sel)}</div>
-    <div><p class="lede">Outer ring: major keys. Inner ring: relative minors. Clockwise is up a 5th and adds a sharp (or removes a flat). Counter-clockwise is up a 4th and adds a flat.</p>
+    <div>${learn('k-circle')}<p class="lede">Outer ring: major keys. Inner ring: relative minors. Clockwise is up a 5th and adds a sharp (or removes a flat). Counter-clockwise is up a 4th and adds a flat.</p>
       <dl class="facts"><dt>Key</dt><dd class="big"><b>${esc(majorName)} major</b> · ${esc(sig.text)}${sig.accidentals.length ? ': ' + esc(sig.accidentals.join(' ')) : ''}</dd>
       <dt>Scale</dt><dd>${pills(scale, ['1', '2', '3', '4', '5', '6', '7'])}</dd>
       <dt>Relative minor</dt><dd><b>${esc(rel.name)} minor</b>: same key signature, tonic on degree 6 (three frets below ${esc(majorName)}).</dd>
@@ -1748,16 +1791,16 @@ Views.keys = () => {
       <dt>Neighbours</dt><dd>Clockwise: ${esc(next.major)} (dominant key). Counter-clockwise: ${esc(prev.major)} (subdominant key).</dd>
       ${sel === 6 || sel === 7 || sel === 5 ? `<dt>Enharmonic</dt><dd>${esc(COF_KEYS[sel].major)} are the same pitches spelled two ways.</dd>` : ''}</dl></div></div>
     ${T.MAJOR_KEYS.includes(S.root) ? '' : `<p class="note">${esc(S.root)} major is a theoretical key (its signature needs double sharps or more than seven sharps). The circle shows its enharmonic, ${esc(majorName)}.</p>`}`)
-    + card(`Diatonic chords in ${esc(majorName)} major`, `<p class="muted">Pattern: Major · minor · minor · Major · Major · minor · diminished.</p>
+    + card(`Diatonic chords in ${esc(majorName)} major`, `${learn('k-diatonic')}<p class="muted">Pattern: Major · minor · minor · Major · Major · minor · diminished.</p>
       <div class="boxes">${dia.map(d => chordTile(d.triad.symbol, d.root, chordIdFromSymbol(d.triad.quality), `<span class="roman">${esc(d.roman)}</span>`)).join('')}</div>
       <h3>Seventh chords</h3><div class="boxes">${dia.map(d => chordTile(d.seventh.symbol, d.root, chordIdFromSymbol(d.seventh.quality), `<span class="roman">${esc(d.romanSeventh)}</span>`)).join('')}</div>
       ${details('Table view', table(['Degree', 'Chord', 'Quality', 'Notes', '7th chord', '7th notes'], dia.map(d => [esc(d.roman), esc(d.triad.symbol), esc(d.triad.quality), esc(noteNames(d.triad.notes)), esc(d.seventh.symbol), esc(noteNames(d.seventh.notes))])))}`)
-    + card(`${esc(rel.name)} natural minor harmonized`, `<p class="muted">The relative minor uses the same seven chords starting from degree 6. Roman numerals are measured against ${esc(rel.name)} major, so ♭III means a major chord on the lowered 3rd.</p>
+    + card(`${esc(rel.name)} natural minor harmonized`, `${learn('k-minor')}<p class="muted">The relative minor uses the same seven chords starting from degree 6. Roman numerals are measured against ${esc(rel.name)} major, so ♭III means a major chord on the lowered 3rd.</p>
       ${table(['Degree', 'Chord', 'Quality', 'Notes', '7th chord'], mdia.map(d => [esc(d.roman), esc(d.triad.symbol), esc(d.triad.quality), esc(noteNames(d.triad.notes)), esc(d.seventh.symbol)]))}
       <p class="note">In minor keys the v chord is often made major (V or V7) by raising the 7th, which comes from harmonic minor: in ${esc(rel.name)} minor that is ${esc(T.chordSymbol(T.degreeNote(rel, '5'), '7'))}.</p>`)
-    + card(`Modes of ${esc(majorName)} major`, table(['Mode', 'Tonic', 'Formula', 'Feel', 'Notes'], T.MODE_NAMES.map((m, i) => { const sc = T.SCALES.find(x => x.mode === i + 1 && x.id !== 'minor'); const ton = scale[i]; return { attrs: ` data-act="gomode" data-scale="${sc.id}" data-r="${ton.name}" tabindex="0" role="button"`, cells: [`<b>${m}</b>`, esc(ton.name), esc(sc.degrees.join(' ')), esc(T.MODE_FEEL[i]), esc(noteNames(T.scaleNotes(ton, sc)))] }; }), 'clicky') + '<p class="muted">Each mode starts on the next degree of the major scale. Tap a row to open it in Scales.</p>')
-    + card(`Common progressions in ${esc(majorName)}`, table(['Progression', 'Chords', 'Genre'], progs.map(p => ({ attrs: ` data-act="goprog" data-id="${p.id}" tabindex="0" role="button"`, cells: [esc(p.name), esc(T.progressionChords(k, p).map(c => c.symbol).join(' – ')), esc(p.genre)] })), 'clicky'))
-    + card('Key signatures and relative keys', details('Sharp keys', sigTable(['C', 'G', 'D', 'A', 'E', 'B', 'F♯', 'C♯']) + '<p class="muted">Order of sharps: F C G D A E B</p>', true)
+    + card(`Modes of ${esc(majorName)} major`, learn('k-modes') + table(['Mode', 'Tonic', 'Formula', 'Feel', 'Notes'], T.MODE_NAMES.map((m, i) => { const sc = T.SCALES.find(x => x.mode === i + 1 && x.id !== 'minor'); const ton = scale[i]; return { attrs: ` data-act="gomode" data-scale="${sc.id}" data-r="${ton.name}" tabindex="0" role="button"`, cells: [`<b>${m}</b>`, esc(ton.name), esc(sc.degrees.join(' ')), esc(T.MODE_FEEL[i]), esc(noteNames(T.scaleNotes(ton, sc)))] }; }), 'clicky') + '<p class="muted">Each mode starts on the next degree of the major scale. Tap a row to open it in Scales.</p>')
+    + card(`Common progressions in ${esc(majorName)}`, learn('k-progs') + table(['Progression', 'Chords', 'Genre'], progs.map(p => ({ attrs: ` data-act="goprog" data-id="${p.id}" tabindex="0" role="button"`, cells: [esc(p.name), esc(T.progressionChords(k, p).map(c => c.symbol).join(' – ')), esc(p.genre)] })), 'clicky'))
+    + card('Key signatures and relative keys', learn('k-sigs') + details('Sharp keys', sigTable(['C', 'G', 'D', 'A', 'E', 'B', 'F♯', 'C♯']) + '<p class="muted">Order of sharps: F C G D A E B</p>', true)
       + details('Flat keys', sigTable(['F', 'B♭', 'E♭', 'A♭', 'D♭', 'G♭', 'C♭']) + '<p class="muted">Order of flats: B E A D G C F</p>', true)
       + details('Relative major ↔ minor', table(['Major', '', 'Minor'], T.CIRCLE.map(x => [esc(x), '↔', esc(T.relativeMinor(x).name)])) + '<p class="muted">Relative minor = 6th degree, 3 frets below the major root.</p>')
       + details('Major scales in all 12 keys', table(['Key', '1', '2', '3', '4', '5', '6', '7'], T.CIRCLE.map(x => [`<b>${esc(x)}</b>`].concat(T.majorScale(x).map(n => esc(n.name))))) + '<p class="muted">Look up the root, then read off the degrees in a chord formula.</p>'));
@@ -1781,6 +1824,7 @@ Views.progressions = () => {
       <label>Tempo <input type="range" min="40" max="200" value="${S.tempo}" data-live="tempo" aria-label="Tempo"> <output id="tempo-out">${S.tempo}</output> BPM</label>
       <label>Beats per chord <select data-set="beatsPerChord" data-num>${opt([1, 2, 3, 4, 6, 8], S.beatsPerChord)}</select></label>
       <label class="chk"><input type="checkbox" data-set="loop" ${S.loop ? 'checked' : ''}> Loop</label></div>
+    ${learn('pr-roman')}
     <div class="romans">${chords.map((c, i) => `<span data-idx="${i}">${esc(c.roman)}</span>`).join('')}</div>
     <div class="boxes prog">${chords.map((c, i) => chordTile(c.symbol, c.root, c.chord.id, `<span class="roman">${esc(c.roman)}</span>`, i)).join('')}</div>
     ${p.id.startsWith('blues') ? '<p class="muted">Each chord box is one bar. Blues uses dominant 7th chords on I, IV and V.</p>' : ''}`)
@@ -1831,8 +1875,8 @@ Views.rhythm = () => {
   if (!rhythmQ) rhythmQ = makeRhythmQ();
   const pulseDots = sig.groups.map((g, gi) => `<span class="grp">${range0(1, g).map(k => `<i class="pulse${k === 1 ? (gi === 0 ? ' acc2' : ' acc1') : ''}" data-p=""></i>`).join('')}</span>`).join('');
   let pi = 0; const dots = pulseDots.replace(/data-p=""/g, () => `data-p="${pi++}"`);
-  return card('Note values', table(['Note', 'Rest', 'Name', 'Beats in 4/4', `Length at ${S.tempo} BPM`], NOTE_VALUES.map(([k, n, b, rest]) => [Render.noteGlyph(k), rest ? Render.noteGlyph(rest) : '<span class="muted">—</span>', esc(n), String(b).replace('0.5', '½').replace('0.25', '¼').replace('0.75', '¾').replace('1.5', '1½'), (b * 60 / S.tempo).toFixed(2) + ' s'])) + '<p class="muted">A dot adds half the note’s value: dotted quarter = 1 + ½ = 1½ beats.</p>')
-    + card('Metronome', `
+  return card('Note values', learn('r-values') + table(['Note', 'Rest', 'Name', 'Beats in 4/4', `Length at ${S.tempo} BPM`], NOTE_VALUES.map(([k, n, b, rest]) => [Render.noteGlyph(k), rest ? Render.noteGlyph(rest) : '<span class="muted">—</span>', esc(n), String(b).replace('0.5', '½').replace('0.25', '¼').replace('0.75', '¾').replace('1.5', '1½'), (b * 60 / S.tempo).toFixed(2) + ' s'])) + '<p class="muted">A dot adds half the note’s value: dotted quarter = 1 + ½ = 1½ beats.</p>')
+    + card('Metronome', `${learn('r-meter')}
       <div class="row transport"><button class="btn primary" type="button" data-act="metro">${S.met.on ? 'Stop' : 'Start'}</button>
         <label>Tempo <input type="range" min="30" max="240" value="${S.tempo}" data-live="tempo" aria-label="Tempo"> <output id="tempo-out">${S.tempo}</output> BPM</label>
         <button class="btn ghost" type="button" data-act="tap">Tap tempo</button></div>
@@ -1841,7 +1885,7 @@ Views.rhythm = () => {
       <p class="lede"><b>${esc(S.met.sig)}</b>: ${esc(sig.text)} Tempo counts the ${esc(sig.beatUnit)}.</p>
       <div class="beats" aria-hidden="true">${dots}</div>
       <p class="muted">Count: ${esc(sig.compound ? sig.groups.map((g, i) => range0(1, g).map(k => k === 1 ? `<${i * g + 1}>` : String(i * g + k)).join('-')).join('  ').replace(/[<>]/g, '') : sig.count.join('-'))}${sig.compound ? ' (accent the first of each group)' : ''}</p>`)
-    + card('Rhythm examples in 4/4', `<div class="patterns">${PATTERNS.map(p => `<div class="pat" data-pat="${p.id}"><div class="pat-notes">${p.notes.map((v, i) => `<span class="pn" data-i="${i}">${glyphFor(v)}<small>${esc(countLabels(p.notes)[i])}</small></span>`).join('')}</div><div class="pat-foot"><span>${esc(p.name)}</span><button class="btn small" type="button" data-act="playpat" data-id="${p.id}">Play</button></div></div>`).join('')}</div>
+    + card('Rhythm examples in 4/4', `${learn('r-count')}<div class="patterns">${PATTERNS.map(p => `<div class="pat" data-pat="${p.id}"><div class="pat-notes">${p.notes.map((v, i) => `<span class="pn" data-i="${i}">${glyphFor(v)}<small>${esc(countLabels(p.notes)[i])}</small></span>`).join('')}</div><div class="pat-foot"><span>${esc(p.name)}</span><button class="btn small" type="button" data-act="playpat" data-id="${p.id}">Play</button></div></div>`).join('')}</div>
       <p class="muted">Counting: “1 e & a” splits a beat into sixteenths; “&” is the half-beat. Counts in brackets are rests.</p>`)
     + card('Counting exercise', rhythmQuestion());
 };
@@ -1923,13 +1967,13 @@ Views.harmony = () => {
   const dia = T.diatonicChords(r); const V = dia[4]; const sub = T.tritoneSub(V.root);
   const vNotes = T.chordNotes(V.root, '7');
   const row = id => { const c = T.getChord(id); return { attrs: ` data-act="harmplay" data-r="${r.name}" data-c="${id}" tabindex="0" role="button"`, cells: [esc(c.name), `<b>${esc(T.chordSymbol(r, c))}</b>`, esc(c.degrees.join(' ')), esc(noteNames(T.chordNotes(r, c)))] }; };
-  return card(`Extended chords on ${esc(S.root)}`, table(['Chord', 'Symbol', 'Formula', 'Notes'], ext.map(row), 'clicky') + `<p class="muted">Extensions keep stacking 3rds past the octave: 9 = 2, 11 = 4, 13 = 6 an octave up. A 13th chord usually omits the 11th; tap a row to hear it.</p>`)
-    + card(`Altered dominants on ${esc(S.root)}`, table(['Chord', 'Symbol', 'Formula', 'Notes'], alt.map(row), 'clicky') + `<p class="muted">Altering the 5th and 9th of a dominant adds tension that resolves strongly to the I chord a 5th below.</p>`)
-    + card(`Secondary dominants in ${esc(S.root)} major`, `<p class="lede">The V7 of a chord other than I. It borrows the pull of a dominant to lead into that chord.</p>${table(['Function', 'Chord', 'Notes', 'Resolves to'], T.secondaryDominants(r).map(x => ({ attrs: ` data-act="resolve" data-a="${x.root.name}|7" data-b="${x.target}" tabindex="0" role="button"`, cells: [esc(x.label), `<b>${esc(x.symbol)}</b>`, esc(noteNames(x.notes)), esc(x.target)] })), 'clicky')}<p class="muted">Tap a row to hear the dominant resolve.</p>`)
-    + card(`Modal interchange in ${esc(S.root)} major`, `<p class="lede">Borrow chords from the parallel minor (${esc(S.root)} minor) for a darker colour.</p>${table(['Numeral', 'Chord', 'Notes'], T.borrowedChords(r).map(x => [esc(x.roman), `<b>${esc(x.symbol)}</b>`, esc(noteNames(x.notes))]))}`)
-    + card('Tritone substitution', `<p>Replace ${esc(V.root.name)}7 (V7) with the dominant a tritone away: <b>${esc(sub.symbol)}</b>. Both share the same tritone, ${esc(vNotes[1].name)} and ${esc(vNotes[3].name)} (spelled ${esc(sub.notes[3].name)} and ${esc(sub.notes[1].name)} in ${esc(sub.symbol)}), which is why either resolves to ${esc(r.name)}.</p>
+  return card(`Extended chords on ${esc(S.root)}`, learn('h-ext') + table(['Chord', 'Symbol', 'Formula', 'Notes'], ext.map(row), 'clicky') + `<p class="muted">Extensions keep stacking 3rds past the octave: 9 = 2, 11 = 4, 13 = 6 an octave up. A 13th chord usually omits the 11th; tap a row to hear it.</p>`)
+    + card(`Altered dominants on ${esc(S.root)}`, learn('h-alt') + table(['Chord', 'Symbol', 'Formula', 'Notes'], alt.map(row), 'clicky') + `<p class="muted">Altering the 5th and 9th of a dominant adds tension that resolves strongly to the I chord a 5th below.</p>`)
+    + card(`Secondary dominants in ${esc(S.root)} major`, `${learn('h-sec')}<p class="lede">The V7 of a chord other than I. It borrows the pull of a dominant to lead into that chord.</p>${table(['Function', 'Chord', 'Notes', 'Resolves to'], T.secondaryDominants(r).map(x => ({ attrs: ` data-act="resolve" data-a="${x.root.name}|7" data-b="${x.target}" tabindex="0" role="button"`, cells: [esc(x.label), `<b>${esc(x.symbol)}</b>`, esc(noteNames(x.notes)), esc(x.target)] })), 'clicky')}<p class="muted">Tap a row to hear the dominant resolve.</p>`)
+    + card(`Modal interchange in ${esc(S.root)} major`, `${learn('h-borrow')}<p class="lede">Borrow chords from the parallel minor (${esc(S.root)} minor) for a darker colour.</p>${table(['Numeral', 'Chord', 'Notes'], T.borrowedChords(r).map(x => [esc(x.roman), `<b>${esc(x.symbol)}</b>`, esc(noteNames(x.notes))]))}`)
+    + card('Tritone substitution', `${learn('h-tri')}<p>Replace ${esc(V.root.name)}7 (V7) with the dominant a tritone away: <b>${esc(sub.symbol)}</b>. Both share the same tritone, ${esc(vNotes[1].name)} and ${esc(vNotes[3].name)} (spelled ${esc(sub.notes[3].name)} and ${esc(sub.notes[1].name)} in ${esc(sub.symbol)}), which is why either resolves to ${esc(r.name)}.</p>
       <div class="row"><button class="btn" type="button" data-act="resolve" data-a="${V.root.name}|7" data-b="${r.name}">Hear ${esc(V.root.name)}7 → ${esc(r.name)}</button><button class="btn" type="button" data-act="resolve" data-a="${sub.root.name}|7" data-b="${r.name}">Hear ${esc(sub.symbol)} → ${esc(r.name)}</button></div>`)
-    + card('Chord spelling rules', `<ol class="steps"><li>Build from the major scale of the root; each formula number is a scale degree.</li><li>Use every other letter: a chord stacked in 3rds uses alternate letters (C E G B D F A).</li><li>Alter the note, never the letter: ♭3 of E is G, ♯9 of E is F𝄪, 𝄫7 of C is B𝄫.</li><li>Numbers above 7 are an octave up: 9 = 2, 11 = 4, 13 = 6. A chord is a “9” only if a 7th is present; otherwise it is “add9”.</li><li>On guitar the 5th is the first note to drop. Keep the 3rd and 7th: they define the quality. The 11th is usually left out of 13th chords.</li><li>A bass note other than the root makes an inversion or slash chord, for example Cm7/E♭.</li></ol>
+    + card('Chord spelling rules', `${learn('h-spell')}<ol class="steps"><li>Build from the major scale of the root; each formula number is a scale degree.</li><li>Use every other letter: a chord stacked in 3rds uses alternate letters (C E G B D F A).</li><li>Alter the note, never the letter: ♭3 of E is G, ♯9 of E is F𝄪, 𝄫7 of C is B𝄫.</li><li>Numbers above 7 are an octave up: 9 = 2, 11 = 4, 13 = 6. A chord is a “9” only if a 7th is present; otherwise it is “add9”.</li><li>On guitar the 5th is the first note to drop. Keep the 3rd and 7th: they define the quality. The 11th is usually left out of 13th chords.</li><li>A bass note other than the root makes an inversion or slash chord, for example Cm7/E♭.</li></ol>
       <p class="muted">Common uses: add9, sus2/sus4 and extended chords add colour and tension without changing a chord’s function.</p>`);
 };
 actions.harmplay = el => { const v = bestVoicing(T.parseNote(el.dataset.r), el.dataset.c); if (v) Audio.strum(v.midi); else { const r = T.parseNote(el.dataset.r); const b = nearMidi(r.pc, 48); Audio.strum(T.getChord(el.dataset.c).degrees.map(d => b + T.degreeSemis(d))); } };
@@ -1947,8 +1991,8 @@ Views.basics = () => {
   return card('Guitar basics', `<div class="two"><div><p class="lede">Standard tuning, from the thickest string (6) to the thinnest (1): <b>E A D G B E</b>.</p>
       ${table(['String', 'Note', 'Name'], [['6', 'E', 'Low E'], ['5', 'A', ''], ['4', 'D', ''], ['3', 'G', ''], ['2', 'B', ''], ['1', 'E', 'High e']])}</div>
       <div><ul class="compact"><li>Each fret = one semitone (half step).</li><li>12 frets = one octave: the 12th fret repeats the open string an octave higher.</li><li>Adjacent strings are a perfect 4th apart (5 frets), except G to B, a major 3rd (4 frets). This is why shapes shift by one fret when they cross onto the B string.</li><li>Diagrams in this app show high e on top, like tablature.</li></ul></div></div>`)
-    + card('Notes on the fretboard (standard tuning)', `<p class="muted">Natural notes are blue; sharps/flats are grey (C♯ = D♭ and so on).</p><div class="fb-wrap"><div class="fb-scroll">${Render.fretboard({ tuning: std, min: 0, max: 12, markers: all, clickable: true, label: 'Every note, frets 0 to 12' })}</div></div><p><button class="btn ghost" type="button" data-view="fretboard">Open the full fretboard explorer</button></p>`)
-    + card('Sharps, flats and enharmonics', `<p><b>Natural notes:</b> ${T.LETTERS.map(l => `<span class="key">${l}</span>`).join(' ')}</p><p><b>Sharp (♯)</b> raises a half step; <b>flat (♭)</b> lowers a half step.</p>
+    + card('Notes on the fretboard (standard tuning)', `${learn('b-notes')}<p class="muted">Natural notes are blue; sharps/flats are grey (C♯ = D♭ and so on).</p><div class="fb-wrap"><div class="fb-scroll">${Render.fretboard({ tuning: std, min: 0, max: 12, markers: all, clickable: true, label: 'Every note, frets 0 to 12' })}</div></div><p><button class="btn ghost" type="button" data-view="fretboard">Open the full fretboard explorer</button></p>`)
+    + card('Sharps, flats and enharmonics', `${learn('b-enh')}<p><b>Natural notes:</b> ${T.LETTERS.map(l => `<span class="key">${l}</span>`).join(' ')}</p><p><b>Sharp (♯)</b> raises a half step; <b>flat (♭)</b> lowers a half step.</p>
       <p><b>Enharmonic equivalents</b> sound the same but are spelled differently: A♯ = B♭, C♯ = D♭, D♯ = E♭, F♯ = G♭, G♯ = A♭.</p><p>There is no sharp or flat between <b>B–C</b> and <b>E–F</b>, so E♯ = F and C♭ = B. Which spelling is correct depends on the key: in F♯ major the 7th is E♯, not F.</p>
       <p class="muted">Double sharp (𝄪) raises two half steps, double flat (𝄫) lowers two: F𝄪 sounds as G, B𝄫 sounds as A.</p>`)
     + card('Guitar tips for chord building', `<ul class="compact"><li><b>Think in frets.</b> ♭3 = 3 frets above the root, 3 = 4, 5 = 7, ♭7 = 10, 7 = 11.</li><li><b>Fast shortcut:</b> from a known chord, change one note. Major → minor: lower the 3rd one fret. Major → 7: add the ♭7, two frets below the octave root.</li><li><b>Drop notes when needed:</b> the 5th can be left out of most chords; keep the 3rd and 7th.</li><li><b>Doubling is fine:</b> repeating the root or 5th doesn’t change the chord name.</li><li><b>Bass note ≠ root?</b> It’s an inversion or slash chord: Cm7/E♭ is Cm7 with E♭ in the bass.</li></ul>`)
@@ -1969,8 +2013,20 @@ const CHEAT_MAP = [
 const EXERCISES = [
   ['note', 'Find the note on the fretboard'], ['roots', 'Find all the roots'], ['interval', 'Identify the interval'], ['degree', 'Identify the scale degree'],
   ['tones', 'Identify chord tones'], ['chord', 'Identify the chord'], ['complete', 'Complete the major scale'], ['position', 'Recognise the scale position'],
-  ['build', 'Build a chord from its formula'], ['relative', 'Relative major and minor']
+  ['build', 'Build a chord from its formula'], ['relative', 'Relative major and minor'],
+  ['ivgroups', 'Interval memorization groups'], ['direction', 'Ascending and descending intervals'], ['ivinvert', 'Interval inversions'],
+  ['scalebuild', 'Build a major or natural minor scale'], ['triad', 'Triad qualities and inversions'], ['family', 'Chord families (diatonic chords)'], ['fbinterval', 'Intervals on the fretboard']
 ];
+/* Interval memorization groups, in the suggested learning order. */
+const IV_SETS = { perfect: ['P1', 'P4', 'P5', 'P8'], major: ['M2', 'M3', 'M6', 'M7'], minor: ['m2', 'm3', 'm6', 'm7'], tritone: ['A4', 'd5'], mixed: ['P1', 'm2', 'M2', 'm3', 'M3', 'P4', 'A4', 'd5', 'P5', 'm6', 'M6', 'm7', 'M7', 'P8'] };
+const GROUPS = [['perfect', '1. Perfect: 0–5–7–12'], ['major', '2. Major: 2–4–9–11'], ['minor', '3. Minor: 1–3–8–10'], ['tritone', '4. Tritone: 6'], ['mixed', '5. Mixed']];
+const GROUP_HINT = { perfect: 'Perfect anchors: P1 = 0, P4 = 5, P5 = 7, P8 = 12.', major: 'Major intervals: M2 = 2, M3 = 4, M6 = 9, M7 = 11.', minor: 'Minor = one semitone below major: m2 = 1, m3 = 3, m6 = 8, m7 = 10.', tritone: 'Tritone = 6 semitones. A4 if the letters are a 4th apart, d5 if they are a 5th apart.', mixed: 'Perfect 0–5–7–12 · major 2–4–9–11 · minor 1–3–8–10 · tritone 6.' };
+const ivOf = a => T.INTERVALS.find(x => x.abbr === a);
+const ivLabel = s => s === 6 ? 'A4 / d5' : T.INTERVALS.find(x => x.semis === s && IV_SETS.mixed.includes(x.abbr)).abbr;
+const SEMI_LABELS = range0(0, 12).map(ivLabel);
+const signedSemis = n => (n < 0 ? '−' : '+') + Math.abs(n);
+/* Upper note and its octave for an ascending interval from root in octave 4. */
+function ivTop(root, iv) { const top = T.degreeNote(root, iv.degree); const o = [4, 5].find(o2 => { const r = T.intervalBetween(root, 4, top, o2); return r.abbr === iv.abbr && !r.descending; }); return { top, o }; }
 const LEVELS = ['beginner', 'intermediate', 'advanced'];
 const rnd = a => a[Math.floor(Math.random() * a.length)];
 const shuffle = a => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
@@ -1980,6 +2036,8 @@ function choicesFrom(right, pool, n = 4) { const set = [right]; for (const p of 
 let P = { q: null, picked: null, sel: [], result: null };
 function progress() { const d = Store.get('gte.practice', null); return d && typeof d === 'object' && d.stats ? d : { stats: {}, missed: [] }; }
 function saveProgress(p) { Store.set('gte.practice', p); }
+/* Stats key; interval groups score each group separately. Existing keys (ex:level) are unchanged. */
+const statKey = () => S.practice.ex + (S.practice.ex === 'ivgroups' ? '-' + S.practice.group : '') + ':' + S.practice.level;
 
 const GEN = {
   note(level) {
@@ -1999,31 +2057,31 @@ const GEN = {
     const top = T.degreeNote(root, iv.degree); const oct = 4 + Math.floor((T.parseDegree(iv.degree).n - 1) / 7);
     const res = T.intervalBetween(root, 4, top, oct);
     const midiA = T.midiOf(root, 3), midiB = midiA + res.semis;
-    return { kind: 'choice', prompt: `What interval is <b>${esc(root.name)}</b> up to <b>${esc(top.name)}</b>${res.compound ? ' (an octave or more above)' : ''}?`, audio: [midiA, midiB], right: res.name, choices: choicesFrom(res.name, pool.map(x => T.intervalBetween(root, 4, T.degreeNote(root, x.degree), 4 + Math.floor((T.parseDegree(x.degree).n - 1) / 7)).name)), explain: `${res.semis} semitones, ${res.number} letters (${esc(root.name)} to ${esc(top.name)}).`, spec: { ex: 'interval' } };
+    return { kind: 'choice', prompt: `What interval is <b>${esc(root.name)}</b> up to <b>${esc(top.name)}</b>${res.compound ? ' (an octave or more above)' : ''}?`, audio: [midiA, midiB], right: res.name, choices: choicesFrom(res.name, pool.map(x => T.intervalBetween(root, 4, T.degreeNote(root, x.degree), 4 + Math.floor((T.parseDegree(x.degree).n - 1) / 7)).name)), explain: `${res.semis} semitones, ${res.number} letters (${esc(root.name)} to ${esc(top.name)}).`, hint: 'Count letters for the number (C D E = 3rd), then semitones for the quality.', spec: { ex: 'interval' } };
   },
   degree(level) {
     const sc = level === 'beginner' ? T.getScale('major') : level === 'intermediate' ? T.getScale(rnd(['major', 'minor'])) : T.getScale(rnd(['major', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'minor', 'locrian', 'harmonic']));
     const root = T.parseNote(rnd(ROOTS_BY_LEVEL[level])); const notes = T.scaleNotes(root, sc); const i = 1 + Math.floor(Math.random() * 6);
-    return { kind: 'choice', prompt: `In <b>${esc(root.name)} ${esc(sc.name)}</b>, which degree is <b>${esc(notes[i].name)}</b>?`, right: sc.degrees[i], choices: choicesFrom(sc.degrees[i], sc.degrees.slice(1)), explain: `${esc(root.name)} ${esc(sc.name)}: ${esc(noteNames(notes))}.`, spec: { ex: 'degree' } };
+    return { kind: 'choice', prompt: `In <b>${esc(root.name)} ${esc(sc.name)}</b>, which degree is <b>${esc(notes[i].name)}</b>?`, right: sc.degrees[i], choices: choicesFrom(sc.degrees[i], sc.degrees.slice(1)), explain: `${esc(root.name)} ${esc(sc.name)}: ${esc(noteNames(notes))}.`, hint: 'Count letters up from the root: the root is 1. Check sharps or flats against the formula.', spec: { ex: 'degree' } };
   },
   tones(level) {
     const ids = level === 'beginner' ? ['maj', 'min'] : level === 'intermediate' ? ['7', 'maj7', 'm7', 'dim', 'aug'] : ['m7b5', 'dim7', '9', '13', '7s9', 'mmaj7', '7b9'];
     const c = T.getChord(rnd(ids)); const root = T.parseNote(rnd(ROOTS_BY_LEVEL[level])); const notes = T.chordNotes(root, c);
     const k = 1 + Math.floor(Math.random() * (notes.length - 1)); const deg = c.degrees[k];
     const pool = T.majorScale(root).concat(T.chordNotes(root, 'dim7'), T.chordNotes(root, '7s9')).map(n => n.name);
-    return { kind: 'choice', prompt: `What is the <b>${esc(deg)}</b> of <b>${esc(T.chordSymbol(root, c))}</b>?`, right: notes[k].name, choices: choicesFrom(notes[k].name, pool), explain: `${esc(T.chordSymbol(root, c))} = ${esc(noteNames(notes))} (${esc(c.degrees.join(' '))}).`, spec: { ex: 'tones' } };
+    return { kind: 'choice', prompt: `What is the <b>${esc(deg)}</b> of <b>${esc(T.chordSymbol(root, c))}</b>?`, right: notes[k].name, choices: choicesFrom(notes[k].name, pool), explain: `${esc(T.chordSymbol(root, c))} = ${esc(noteNames(notes))} (${esc(c.degrees.join(' '))}).`, hint: 'Write the major scale of the root, take that degree, then apply any ♭ or ♯ from the formula.', spec: { ex: 'tones' } };
   },
   chord(level) {
     const ids = level === 'beginner' ? ['maj', 'min', 'dim', 'aug', 'sus4'] : level === 'intermediate' ? ['maj', 'min', '7', 'maj7', 'm7', 'm7b5', 'sus2', '6'] : ['m7b5', 'dim7', 'mmaj7', '9', 'maj9', 'm9', '7s9', '7b9', '13', '7sus4'];
     const c = T.getChord(rnd(ids)); const root = T.parseNote(rnd(ROOTS_BY_LEVEL[level])); const notes = T.chordNotes(root, c);
     const right = T.chordSymbol(root, c);
-    return { kind: 'choice', prompt: `Which chord is <b>${esc(noteNames(notes))}</b>?`, audio: notes.map((n, i) => T.midiOf(n, 3) + (i && n.pc <= notes[0].pc ? 12 : 0)), chordAudio: true, right, choices: choicesFrom(right, ids.map(id => T.chordSymbol(root, id))), explain: `Root ${esc(root.name)}, formula ${esc(c.degrees.join(' '))}.`, spec: { ex: 'chord' } };
+    return { kind: 'choice', prompt: `Which chord is <b>${esc(noteNames(notes))}</b>?`, audio: notes.map((n, i) => T.midiOf(n, 3) + (i && n.pc <= notes[0].pc ? 12 : 0)), chordAudio: true, right, choices: choicesFrom(right, ids.map(id => T.chordSymbol(root, id))), explain: `Root ${esc(root.name)}, formula ${esc(c.degrees.join(' '))}.`, hint: 'The first note is the root. Measure the 3rd (3 or 4 semitones) and the 5th, then any 7th.', spec: { ex: 'chord' } };
   },
   complete(level) {
     const root = T.parseNote(rnd(ROOTS_BY_LEVEL[level])); const ms = T.majorScale(root); const k = 1 + Math.floor(Math.random() * 6);
     const right = ms[k].name; const L = ms[k].l;
     const pool = [-1, 0, 1].map(a => T.makeNote(L, ms[k].a + a).name).concat([T.makeNote(L + 1, 0).name]);
-    return { kind: 'choice', prompt: `Complete <b>${esc(root.name)} major</b>: ${ms.map((n, i) => i === k ? '<span class="blank">?</span>' : esc(n.name)).join(' ')}`, right, choices: choicesFrom(right, pool), explain: `Each letter appears once; the step pattern is W W H W W W H.`, spec: { ex: 'complete' } };
+    return { kind: 'choice', prompt: `Complete <b>${esc(root.name)} major</b>: ${ms.map((n, i) => i === k ? '<span class="blank">?</span>' : esc(n.name)).join(' ')}`, right, choices: choicesFrom(right, pool), explain: `Each letter appears once; the step pattern is W W H W W W H.`, hint: 'Each letter appears once. Steps: W W H W W W H.', spec: { ex: 'complete' } };
   },
   position(level) {
     const scId = level === 'beginner' ? 'minpent' : level === 'intermediate' ? rnd(['minpent', 'major']) : rnd(['major', 'minor', 'majpent']);
@@ -2036,7 +2094,87 @@ const GEN = {
     const c = T.getChord(rnd(ids)); const root = T.parseNote(rnd(ROOTS_BY_LEVEL[level])); const right = noteNames(T.chordNotes(root, c));
     const wrong = ids.filter(id => id !== c.id).map(id => noteNames(T.chordNotes(root, id)));
     wrong.push(T.chordNotes(root, c).map(n => T.pcName(n.pc, n.a < 0 ? 'sharp' : 'flat')).join(' '));
-    return { kind: 'choice', prompt: `Build <b>${esc(T.chordSymbol(root, c))}</b> (formula ${esc(c.degrees.join(' '))}).`, right, choices: choicesFrom(right, wrong), explain: `Major scale of ${esc(root.name)}: ${esc(noteNames(T.majorScale(root)))}. Spell with letters in order.`, spec: { ex: 'build' } };
+    return { kind: 'choice', prompt: `Build <b>${esc(T.chordSymbol(root, c))}</b> (formula ${esc(c.degrees.join(' '))}).`, right, choices: choicesFrom(right, wrong), explain: `Major scale of ${esc(root.name)}: ${esc(noteNames(T.majorScale(root)))}. Spell with letters in order.`, hint: 'Write the major scale of the root, pick the formula degrees, then apply ♭ and ♯.', spec: { ex: 'build' } };
+  },
+  ivgroups(level) {
+    const group = IV_SETS[S.practice.group] ? S.practice.group : 'perfect'; const set = IV_SETS[group]; const iv = ivOf(rnd(set));
+    const types = ['toName', 'toSemis'].concat(level !== 'beginner' ? ['fromRoot'] : []).concat(level === 'advanced' || group === 'tritone' ? ['spelled'] : []);
+    const type = rnd(types); const spec = { ex: 'ivgroups', group }; const hint = GROUP_HINT[group];
+    const near = s => uniq([s].concat(set.map(a => ivOf(a).semis), [s - 1, s + 1, s + 2, s - 2].filter(x => x >= 0 && x <= 12)));
+    const explain = `${esc(iv.abbr)} (${esc(iv.name.replace(/ \(tritone\)/, ''))}) = ${iv.semis} semitones. ${esc(GROUP_HINT[group])}`;
+    if (type === 'toSemis') return { kind: 'choice', prompt: `How many semitones is a <b>${esc(iv.abbr)}</b> (${esc(iv.name.replace(/ \(tritone\)/, ''))})?`, right: String(iv.semis), choices: (level === 'beginner' ? choicesFrom(iv.semis, near(iv.semis)) : range0(0, 12)).map(String), explain, hint, spec };
+    const root = T.parseNote(rnd(ROOTS_BY_LEVEL[level])); const { top, o } = ivTop(root, iv); const audio = [T.midiOf(root, 3), T.midiOf(root, 3) + iv.semis];
+    if (type === 'fromRoot') {
+      const pool = set.map(a => T.degreeNote(root, ivOf(a).degree).name).concat(IV_SETS.mixed.map(a => T.degreeNote(root, ivOf(a).degree).name));
+      const alt = T.pcName(top.pc, top.a > 0 || top.name.includes('♯') ? 'flat' : 'sharp'); if (alt !== top.name) pool.unshift(alt);
+      return { kind: 'choice', prompt: `What note is a <b>${esc(iv.abbr)}</b> above <b>${esc(root.name)}</b>?`, audio, right: top.name, choices: choicesFrom(top.name, uniq(pool)), explain: `${esc(root.name)} + ${iv.semis} semitones, ${T.parseDegree(iv.degree).n === 8 ? 'same letter' : 'counting ' + T.parseDegree(iv.degree).n + ' letters'} = ${esc(top.name)}. ${explain}`, hint, spec };
+    }
+    if (type === 'spelled') return { kind: 'choice', prompt: `What interval is <b>${esc(root.name)}</b> up to <b>${esc(top.name)}</b>?`, audio, right: iv.abbr, choices: choicesFrom(iv.abbr, iv.semis === 6 ? ['A4', 'd5', 'P4', 'P5'] : set.concat(IV_SETS.mixed)), explain: `${esc(root.name)}–${esc(top.name)}: ${T.parseDegree(iv.degree).n} letters and ${iv.semis} semitones = ${esc(iv.abbr)}${o > 4 ? ' (the octave above)' : ''}.`, hint, spec };
+    const right = ivLabel(iv.semis);
+    return { kind: 'choice', prompt: `Which interval is <b>${iv.semis} semitone${iv.semis === 1 ? '' : 's'}</b>?`, right, choices: level === 'beginner' ? choicesFrom(right, uniq(set.map(a => ivLabel(ivOf(a).semis)).concat(SEMI_LABELS))) : SEMI_LABELS.slice(), explain, hint, spec };
+  },
+  direction(level) {
+    const pool = level === 'beginner' ? ['M2', 'm3', 'M3', 'P4', 'P5', 'P8'] : IV_SETS.mixed.filter(a => a !== 'P1');
+    const iv = ivOf(rnd(pool)); const root = T.parseNote(rnd(ROOTS_BY_LEVEL[level])); const { top, o } = ivTop(root, iv); const down = Math.random() < 0.5;
+    const [a, ao, b, bo] = down ? [top, o, root, 4] : [root, 4, top, o]; const res = T.intervalBetween(a, ao, b, bo); const inv = T.invertInterval(iv);
+    const lab = (abbr, s, d) => `${abbr} ${d ? 'down' : 'up'} (${signedSemis(d ? -s : s)})`;
+    const right = lab(res.abbr, res.semis, res.descending);
+    const wrong = [lab(res.abbr, res.semis, !res.descending), lab(inv.abbr, inv.semis, res.descending), lab(inv.abbr, inv.semis, !res.descending)].concat(pool.map(x => lab(x, ivOf(x).semis, res.descending)));
+    return { kind: 'choice', prompt: `Name the interval and its direction: <b>${esc(a.name)}${ao} → ${esc(b.name)}${bo}</b>`, audio: [T.midiOf(a, ao), T.midiOf(b, bo)], right, choices: choicesFrom(right, uniq(wrong).filter(x => x !== right)), explain: `${esc(a.name)}${ao} ${res.descending ? 'down' : 'up'} to ${esc(b.name)}${bo}: ${T.parseDegree(iv.degree).n} letters, ${res.semis} semitones = ${esc(res.abbr)}. Direction does not change the quality. Its inversion would be ${esc(inv.abbr)} (${inv.semis}).`, hint: 'Count letters for the number and semitones for the quality. Then note whether the second note is higher or lower.', spec: { ex: 'direction' } };
+  },
+  ivinvert(level) {
+    const pool = level === 'beginner' ? ['m2', 'M2', 'm3', 'M3', 'P4', 'P5', 'm6', 'M6', 'm7', 'M7'] : level === 'intermediate' ? IV_SETS.mixed : IV_SETS.mixed.concat(['A2', 'A5', 'd7']);
+    const iv = ivOf(rnd(pool)); const inv = T.invertInterval(iv); const hint = 'Numbers add to 9, qualities swap (M↔m, A↔d, P stays P), semitones add to 12.';
+    const explain = `${esc(iv.abbr)} (${iv.semis}) ↔ ${esc(inv.abbr)} (${inv.semis}): ${T.parseDegree(iv.degree).n} + ${9 - T.parseDegree(iv.degree).n} = 9 and ${iv.semis} + ${inv.semis} = 12.`;
+    const type = level === 'beginner' ? 'name' : rnd(level === 'advanced' ? ['name', 'semis', 'notes'] : ['name', 'semis']);
+    if (type === 'semis') return { kind: 'choice', prompt: `<b>${esc(iv.abbr)}</b> is ${iv.semis} semitones. How many semitones is its inversion?`, right: String(inv.semis), choices: range0(0, 12).map(String), explain, hint, spec: { ex: 'ivinvert' } };
+    if (type === 'notes') {
+      const root = T.parseNote(rnd(ROOTS_BY_LEVEL[level])); const { top, o } = ivTop(root, iv); const res = T.intervalBetween(top, o, root, 5);
+      return { kind: 'choice', prompt: `<b>${esc(root.name)}4 → ${esc(top.name)}${o}</b> is ${esc(iv.abbr)}. Move ${esc(root.name)} up an octave. What is <b>${esc(top.name)}${o} → ${esc(root.name)}5</b>?`, audio: [T.midiOf(top, o), T.midiOf(root, 5)], right: res.abbr, choices: choicesFrom(res.abbr, pool.map(a => T.invertInterval(a).abbr).concat([iv.abbr])), explain, hint, spec: { ex: 'ivinvert' } };
+    }
+    return { kind: 'choice', prompt: `What is the inversion of <b>${esc(iv.abbr)}</b> (${esc(iv.name.replace(/ \(tritone\)/, ''))})?`, right: inv.abbr, choices: choicesFrom(inv.abbr, pool.map(a => T.invertInterval(a).abbr).concat([iv.abbr])), explain, hint, spec: { ex: 'ivinvert' } };
+  },
+  scalebuild(level) {
+    const id = level === 'beginner' ? 'major' : rnd(['major', 'minor']);
+    const root = T.parseNote(rnd(id === 'major' ? ROOTS_BY_LEVEL[level] : level === 'advanced' ? MINOR_KEYS : ['A', 'E', 'B', 'D', 'G', 'C', 'F'])); const other = id === 'major' ? 'minor' : 'major'; const notes = T.scaleNotes(root, id); const right = noteNames(notes);
+    const respell = notes.map(n => T.pcName(n.pc, T.prefersFlats(root.name) ? 'sharp' : 'flat')).join(' ');
+    const wrong = [noteNames(T.scaleNotes(root, other)), noteNames(T.scaleNotes(root, id === 'major' ? 'lydian' : 'harmonic')), noteNames(T.scaleNotes(root, id === 'major' ? 'mixolydian' : 'dorian')), respell].filter(x => x !== right);
+    const name = id === 'major' ? 'major' : 'natural minor';
+    return { kind: 'choice', prompt: `Build <b>${esc(root.name)} ${name}</b>.`, right, choices: choicesFrom(right, wrong), explain: id === 'major' ? `W W H W W W H from ${esc(root.name)}, one letter each: ${esc(right)}.` : `${esc(root.name)} major is ${esc(noteNames(T.scaleNotes(root, 'major')))}; lower 3, 6 and 7: ${esc(right)}.`, hint: id === 'major' ? 'Steps W W H W W W H; use every letter once.' : 'Natural minor = 1 2 ♭3 4 5 ♭6 ♭7: the major scale with 3, 6 and 7 lowered.', spec: { ex: 'scalebuild' } };
+  },
+  triad(level) {
+    const Q = [['maj', 'Major', 'M3 + m3'], ['min', 'Minor', 'm3 + M3'], ['dim', 'Diminished', 'm3 + m3'], ['aug', 'Augmented', 'M3 + M3']]; const names = Q.map(q => q[1]);
+    const [id, name, stack] = rnd(Q); const c = T.getChord(id); const hint = 'Major 0–4–7 (M3+m3) · minor 0–3–7 (m3+M3) · diminished 0–3–6 (m3+m3) · augmented 0–4–8 (M3+M3).';
+    const types = ['stack', 'semis'].concat(level !== 'beginner' ? ['spell'] : []).concat(level === 'advanced' ? ['inv'] : []); const type = rnd(types);
+    const root = T.parseNote(rnd(ROOTS_BY_LEVEL[level])); const notes = T.chordNotes(root, c);
+    if (type === 'spell') { const right = noteNames(notes); return { kind: 'choice', prompt: `Spell <b>${esc(root.name)} ${name.toLowerCase()}</b>.`, right, choices: choicesFrom(right, Q.map(q => noteNames(T.chordNotes(root, q[0])))), explain: `${esc(T.chordSymbol(root, c))} = ${esc(c.degrees.join(' '))} = ${esc(right)}.`, hint, spec: { ex: 'triad' } }; }
+    if (type === 'inv') { const k = Math.floor(Math.random() * 3); const lab = ['Root position', '1st inversion', '2nd inversion']; const order = T.inversionOrder(notes, k); return { kind: 'choice', prompt: `<b>${esc(noteNames(order))}</b> (low to high) is ${esc(T.chordSymbol(root, c))} in which position?`, audio: (() => { let prev = -1; return order.map(n => { let m = T.midiOf(n, 3); while (m <= prev) m += 12; prev = m; return m; }); })(), chordAudio: true, right: lab[k], choices: lab.slice(), explain: `The bass note ${esc(order[0].name)} is the ${['root', '3rd', '5th'][k]}.`, hint: 'Find the bass (lowest) note and ask which chord tone it is: root, 3rd or 5th.', spec: { ex: 'triad' } }; }
+    if (type === 'semis') return { kind: 'choice', prompt: `Which triad has semitones <b>${c.degrees.map(T.degreeSemis).join('–')}</b> from the root?`, right: name, choices: names.slice(), explain: `${name}: ${esc(c.degrees.join('–'))} = ${c.degrees.map(T.degreeSemis).join('–')}, for example ${esc(noteNames(notes))}.`, hint, spec: { ex: 'triad' } };
+    return { kind: 'choice', prompt: `Which triad is <b>${stack}</b> stacked from the root?`, right: name, choices: names.slice(), explain: `${stack} = ${name.toLowerCase()} (${c.degrees.map(T.degreeSemis).join('–')}).`, hint, spec: { ex: 'triad' } };
+  },
+  family(level) {
+    const minor = level === 'advanced' && Math.random() < 0.5; const key = T.parseNote(rnd(minor ? MINOR_KEYS.slice(0, 12) : ROOTS_BY_LEVEL[level]));
+    const dia = T.diatonicChords(key, minor ? 'minor' : 'major'); const i = Math.floor(Math.random() * 7); const d = dia[i]; const rn = romanFor(i, d.triad.quality);
+    const keyName = `${esc(key.name)} ${minor ? 'minor' : 'major'}`; const all = dia.map((x, j) => `${romanFor(j, x.triad.quality)} ${x.triad.symbol}`).join(' · ');
+    const hint = minor ? 'Natural minor: i ii° III iv v VI VII.' : 'Major key: I ii iii IV V vi vii° (1, 4, 5 major · 2, 3, 6 minor · 7 diminished).';
+    const type = level === 'beginner' ? rnd(['chord', 'roman']) : rnd(['chord', 'roman', 'quality']);
+    if (type === 'quality') { const right = d.triad.quality; return { kind: 'choice', prompt: `In any ${minor ? 'natural minor' : 'major'} key, what quality is the chord on degree <b>${i + 1}</b>?`, right, choices: ['Major', 'Minor', 'Diminished'], explain: `Degree ${i + 1} = ${esc(rn)}. ${esc(hint)}`, hint, spec: { ex: 'family' } }; }
+    if (type === 'roman') return { kind: 'choice', prompt: `In <b>${keyName}</b>, which numeral is <b>${esc(d.triad.symbol)}</b>?`, right: rn, choices: dia.map((x, j) => romanFor(j, x.triad.quality)), explain: `${keyName}: ${esc(all)}.`, hint, spec: { ex: 'family' } };
+    return { kind: 'choice', prompt: `In <b>${keyName}</b>, what is the <b>${esc(rn)}</b> chord?`, right: d.triad.symbol, choices: choicesFrom(d.triad.symbol, dia.map(x => x.triad.symbol).concat([T.chordSymbol(d.root, d.triad.quality === 'Major' ? 'min' : 'maj')])), explain: `${keyName}: ${esc(all)}.`, hint, spec: { ex: 'family' } };
+  },
+  fbinterval(level) {
+    const tun = T.TUNINGS[0]; const lim = level === 'beginner' ? 7 : 12;
+    const pool = level === 'beginner' ? ['m3', 'M3', 'P4', 'P5', 'P8'] : IV_SETS.mixed.filter(a => a !== 'P1' && a !== 'd5');
+    let down = level === 'advanced' && Math.random() < 0.5; let tries = 0, s, f, s2, f2, iv;
+    do {
+      iv = ivOf(rnd(pool)); s = Math.floor(Math.random() * 6); f = 1 + Math.floor(Math.random() * lim);
+      const opts = [0, 1, 2].map(k => down ? s - k : s + k).filter(x => x >= 0 && x < 6).map(x => ({ s2: x, f2: f + (down ? -iv.semis : iv.semis) - (tun.midi[x] - tun.midi[s]) })).filter(x => x.f2 >= 0 && x.f2 <= lim + 3 && !(x.s2 === s && x.f2 === f));
+      if (opts.length) ({ s2, f2 } = rnd(opts));
+    } while (s2 == null && ++tries < 50);
+    if (s2 == null) { s2 = s; f2 = f + iv.semis; down = false; }
+    const m = {}; m[s + ':' + f] = { cls: 'root', label: 'R' }; m[s2 + ':' + f2] = { cls: 'blue', label: '?', ring: true };
+    const right = ivLabel(iv.semis); const crossGB = Math.min(s, s2) <= 3 && Math.max(s, s2) >= 4;
+    return { kind: 'choice', prompt: `The red dot is the root. What interval is the <b>?</b> note ${down ? '<b>below</b>' : 'above'} it?`, fb: { min: Math.max(0, Math.min(f, f2) - 1), max: Math.max(f, f2) + 1, markers: m }, audio: [tun.midi[s] + f, tun.midi[s2] + f2], right, choices: SEMI_LABELS.slice(1), explain: `String ${6 - s} fret ${f} → string ${6 - s2} fret ${f2}: ${iv.semis} semitones ${down ? 'down' : 'up'} = ${esc(right)}.${crossGB && s !== s2 ? ' This shape crosses the G–B pair, which is 4 semitones apart instead of 5.' : ''}`, hint: 'Same string: count frets. Each string up adds 5 semitones (4 from G to B).', spec: { ex: 'fbinterval' } };
   },
   relative(level) {
     const toMinor = Math.random() < 0.5; const k = rnd(ROOTS_BY_LEVEL[level]);
@@ -2047,17 +2185,18 @@ const GEN = {
 };
 function newQuestion() {
   const pr = progress(); const ex = S.practice.ex; const level = S.practice.level;
-  const missed = pr.missed.filter(m => m.ex === ex && m.level === level);
+  const missed = pr.missed.filter(m => m.ex === ex && m.level === level && (ex !== 'ivgroups' || (m.q.spec && m.q.spec.group) === S.practice.group));
   let q;
   if (missed.length && Math.random() < 0.4) { const m = missed[0]; q = m.q; q.retry = true; pr.missed = pr.missed.filter(x => x !== m); saveProgress(pr); }
   else q = GEN[ex](level);
-  P = { q, picked: null, sel: [], result: null };
+  P = { q, picked: null, sel: [], result: null, hint: false };
 }
 Views.practice = () => {
   if (!EXERCISES.some(e => e[0] === S.practice.ex)) S.practice.ex = 'note';
   if (!LEVELS.includes(S.practice.level)) S.practice.level = 'beginner';
-  if (!P.q || P.q.spec.ex !== S.practice.ex || P.level !== S.practice.level) { newQuestion(); P.level = S.practice.level; }
-  const pr = progress(); const st = pr.stats[S.practice.ex + ':' + S.practice.level] || { right: 0, total: 0 };
+  if (!IV_SETS[S.practice.group]) S.practice.group = 'perfect';
+  if (!P.q || P.q.spec.ex !== S.practice.ex || P.level !== S.practice.level || (S.practice.ex === 'ivgroups' && P.q.spec.group !== S.practice.group)) { newQuestion(); P.level = S.practice.level; }
+  const pr = progress(); const st = pr.stats[statKey()] || { right: 0, total: 0 };
   const allR = Object.values(pr.stats).reduce((a, s) => a + s.right, 0), allT = Object.values(pr.stats).reduce((a, s) => a + s.total, 0);
   const q = P.q;
   actions.fbnoteHook = (el, { midi, s, f }) => {
@@ -2070,6 +2209,8 @@ Views.practice = () => {
   onCleanup(() => { actions.fbnoteHook = null; });
   let body = `<p class="prompt">${q.retry ? '<span class="tag">Review</span> ' : ''}${q.prompt}</p>`;
   if (q.audio) body += `<button class="btn ghost" type="button" data-act="qplay">Hear it</button>`;
+  if (q.hint && !P.result) body += P.hint ? `<p class="hint" role="status"><b>Hint:</b> ${esc(q.hint)}</p>` : ` <button class="btn ghost" type="button" data-act="qhint">Show hint</button>`;
+  if (q.fb) body += `<div class="fb-wrap"><div class="fb-scroll">${Render.fretboard({ tuning: T.TUNINGS[0], min: q.fb.min, max: q.fb.max, markers: q.fb.markers, label: 'Fretboard question (standard tuning)' })}</div></div>`;
   if (q.pos) {
     const sc = T.getScale(q.scId); const m = {}; q.pos.notes.forEach(n => { m[n.s + ':' + n.f] = { cls: n.degree === '1' ? 'root' : 'tone', label: n.degree }; });
     body += `<div class="fb-wrap"><div class="fb-scroll">${Render.fretboard({ tuning: T.TUNINGS[0], min: Math.max(0, q.pos.range[0] - 1), max: q.pos.range[1] + 1, markers: m, label: 'Scale position to identify' })}</div></div>`;
@@ -2084,6 +2225,7 @@ Views.practice = () => {
   }
   if (P.result) body += `<div class="feedback ${P.result === 'right' ? 'ok' : 'bad'}" role="status"><b>${P.result === 'right' ? 'Correct.' : 'Not quite.'}</b> ${q.kind === 'choice' && P.result !== 'right' ? `Answer: <b>${esc(q.right)}</b>. ` : ''}${q.explain || ''}${P.result !== 'right' ? ' This one will come back for review.' : ''}</div><button class="btn primary" type="button" data-act="qnext">Next question</button>`;
   return card('Practice', `<div class="row"><label>Exercise <select data-ch="pex">${opt(EXERCISES.map(([v, l]) => ({ v, l })), S.practice.ex)}</select></label>
+      ${S.practice.ex === 'ivgroups' ? `<label>Group <select data-ch="pgroup">${opt(GROUPS.map(([v, l]) => ({ v, l })), S.practice.group)}</select></label>` : ''}
       <label>Level <select data-ch="plevel">${opt(LEVELS.map(l => ({ v: l, l: l[0].toUpperCase() + l.slice(1) })), S.practice.level)}</select></label></div>
     <p class="score">This exercise: <b>${st.right}/${st.total}</b>${st.total ? ` (${Math.round(st.right / st.total * 100)}%)` : ''} · All exercises: ${allR}/${allT} · Waiting for review: ${pr.missed.length}</p>
     <div class="question">${body}</div>
@@ -2091,7 +2233,7 @@ Views.practice = () => {
 };
 function finish(correct) {
   P.result = correct ? 'right' : 'wrong';
-  const pr = progress(); const key = S.practice.ex + ':' + S.practice.level; const st = pr.stats[key] || { right: 0, total: 0 };
+  const pr = progress(); const key = statKey(); const st = pr.stats[key] || { right: 0, total: 0 };
   st.total++; if (correct) st.right++; pr.stats[key] = st;
   if (!correct && P.q.kind === 'choice' && pr.missed.length < 30) pr.missed.push({ ex: S.practice.ex, level: S.practice.level, q: Object.assign({}, P.q, { retry: false }) });
   if (!correct && P.q.kind !== 'choice' && pr.missed.length < 30) pr.missed.push({ ex: S.practice.ex, level: S.practice.level, q: Object.assign({}, P.q, { retry: false }) });
@@ -2102,6 +2244,8 @@ actions.qcheck = () => { if (P.result) return; const tun = T.TUNINGS[0]; const w
 actions.qnext = () => { newQuestion(); P.level = S.practice.level; render(); };
 actions.qplay = () => { const q = P.q; if (!q.audio) return; const c = Audio.ensure(); if (!c) return; if (q.chordAudio) Audio.strum(q.audio, c.currentTime + 0.03, { spread: 0.05 }); else { Audio.pluck(q.audio[0], c.currentTime + 0.03); Audio.pluck(q.audio[1], c.currentTime + 0.6); } };
 actions.pex = el => { S.practice.ex = el.value; P.q = null; render(); };
+actions.pgroup = el => { S.practice.group = el.value; P.q = null; render(); };
+actions.qhint = () => { P.hint = true; render(); };
 actions.plevel = el => { S.practice.level = el.value; P.q = null; render(); };
 actions.preset = () => { if (window.confirm('Reset all practice scores and the review list?')) { Store.del('gte.practice'); P.q = null; render(); } };
 
@@ -2330,6 +2474,227 @@ actions.tqplay = () => {
 };
 /* Wrap every tab view so its quiz renders first. Practice already is a quiz. */
 Object.keys(QUIZ).forEach(id => { const v = Views[id]; Views[id] = () => { const main = v(); return tabQuiz(id) + main; }; });
+
+/* ---- learn.js ---- */
+/* Learning layer: short explanations next to each tool (What / Why / Where / How / Tip) and the Tips & Tricks tab.
+   Examples are computed from the theory engine with the current root, so they are always spelled correctly. */
+
+/* Folds that stay open across re-renders (every click re-renders the view). */
+const OPEN_FOLDS = new Set();
+document.addEventListener('toggle', e => { const d = e.target; if (!d || !d.dataset || !d.dataset.fold) return; if (d.open) OPEN_FOLDS.add(d.dataset.fold); else OPEN_FOLDS.delete(d.dataset.fold); }, true);
+const fold = (key, summary, body, cls = '') => `<details class="fold ${cls}" data-fold="${key}"${OPEN_FOLDS.has(key) ? ' open' : ''}><summary>${summary}</summary><div class="fold-body">${body}</div></details>`;
+
+const nn = (r, d) => esc(T.degreeNote(r, d).name);
+const scaleStr = (r, id) => esc(noteNames(T.scaleNotes(r, id)));
+const chordStr = (r, id) => esc(noteNames(T.chordNotes(r, id)));
+const ROMAN_UP = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+/* Numerals relative to the key's own tonic (i ii° III … in minor), as most method books write them. */
+const romanFor = (i, quality) => { const lower = quality === 'Minor' || quality === 'Diminished'; return (lower ? ROMAN_UP[i].toLowerCase() : ROMAN_UP[i]) + (quality === 'Diminished' ? '°' : quality === 'Augmented' ? '+' : ''); };
+const MINOR_KEYS = ['A', 'E', 'B', 'F♯', 'C♯', 'G♯', 'D♯', 'A♯', 'D', 'G', 'C', 'F', 'B♭', 'E♭', 'A♭'];
+const majorKeyOf = r => T.MAJOR_KEYS.includes(r.name) ? r : T.parseNote(T.MAJOR_KEYS.find(k => T.parseNote(k).pc === r.pc));
+const minorKeyOf = r => MINOR_KEYS.includes(r.name) ? r : T.parseNote(MINOR_KEYS.find(k => T.parseNote(k).pc === r.pc));
+
+/* Each entry: what (shown by default), why, where, how (may use the current root), tip, see (related links). */
+const LEARN = {
+  /* ---- Tab introductions ---- */
+  'tab:fretboard': { what: 'A map of every note on the neck, so you can see where any note, scale or chord lives.', why: 'Knowing where notes are lets you find chords, scales and melodies anywhere instead of in one memorised spot.', where: 'Fretboard navigation, learning songs, improvising, building your own chord shapes.', how: r => `Each fret raises a string by one semitone. Open A + 3 frets = C. Choose “Root only” to see every ${esc(r.name)}, then add a scale or chord on top.`, tip: 'Learn the natural notes on strings 6 and 5 first. Every other note is found from those two strings with octave shapes.', see: [['tip:fretboard', 'Fretboard shortcuts'], ['view:basics', 'Basics']] },
+  'tab:intervals': { what: 'An interval is the distance between two notes, named by letter count (the number) and semitones (the quality).', why: 'Intervals are the building blocks of scales, chords, melodies and harmony. Knowing them lets you build anything from a root.', where: 'Constructing chords, playing solos, finding notes from a known note, ear training.', how: r => `${esc(r.name)} to ${nn(r, '3')} is a major 3rd: three letters, four semitones, four frets on one string.`, tip: 'Memorise in groups: perfect 0–5–7–12, major 2–4–9–11, minor 1–3–8–10, tritone 6.', see: [['tip:ivgroups', 'Interval memorization'], ['tip:reference', 'Complete interval reference'], ['tip:direction', 'Ascending vs descending']] },
+  'tab:scales': { what: 'A scale is an ordered set of notes organised around a home note (the tonic).', why: 'Scales give you the notes that fit a key, for melodies, solos and the chords of that key.', where: 'Lead guitar and improvisation, writing melodies, understanding which chords belong together.', how: r => `${esc(r.name)} major = ${scaleStr(r, 'major')}, built with the step pattern W W H W W W H.`, tip: 'Learn the step formula, not every key. The formula works from any root.', see: [['tip:scales', 'Major and minor scale patterns'], ['view:keys', 'Keys & circle']] },
+  'tab:builder': { what: 'A chord is three or more notes played together. This tab builds any chord from its formula.', why: 'If you can build a chord from its formula you never need a chord dictionary, and you know which note is the 3rd or 7th when you solo.', where: 'Rhythm guitar, writing your own voicings, reading chord symbols, arranging.', how: r => `${esc(T.chordSymbol(r, 'maj'))} = 1 3 5 of the ${esc(r.name)} major scale = ${chordStr(r, 'maj')}. Minor lowers the 3rd: ${chordStr(r, 'min')}.`, tip: 'A triad is two stacked 3rds. Major = M3 + m3, minor = m3 + M3.', see: [['tip:triads', 'Triads and chord construction'], ['view:inversions', 'Inversions']] },
+  'tab:finder': { what: 'Work backwards: pick the notes you hear or play and get the chord name.', why: 'Songs often use shapes you know but cannot name. Naming them shows how they function in the key.', where: 'Learning songs by ear, naming your own shapes, reading slash chords.', how: () => 'Put the notes in 3rds from one of them (every other letter). The note that makes a stack of 3rds is the root; compare the others to its major scale.', tip: 'The same notes can have two names (C6 = Am7/C). The bass note and the key decide which name is used.', see: [['view:builder', 'Chord builder'], ['tip:triads', 'Triads']] },
+  'tab:shapes': { what: 'Chord diagrams: where to put each finger for open, barre, power and seventh chords.', why: 'Shapes are how chord theory becomes music. Movable shapes let one fingering play every key.', where: 'Rhythm guitar, accompanying singers, learning songs.', how: r => `A movable shape is named by its root note. Slide the E-shape barre so its 6th-string root is on ${esc(r.name)} and it becomes ${esc(T.chordSymbol(r, 'maj'))}.`, tip: 'Learn the root note under each shape (red dot). Then any shape works in any key.', see: [['tip:fretboard', 'Fretboard shortcuts'], ['view:builder', 'Chord builder']] },
+  'tab:inversions': { what: 'A chord inversion keeps the same notes but puts a different chord tone in the bass.', why: 'Inversions give smoother movement between chords and let you play a chord in several places on the neck.', where: 'Rhythm parts, walking bass lines, arranging, slash chords such as C/E.', how: r => { const n = T.chordNotes(r, 'maj'); return `${esc(T.chordSymbol(r, 'maj'))}: root position ${esc(noteNames(n))}; 1st inversion ${esc(noteNames(T.inversionOrder(n, 1)))} (3rd in the bass); 2nd inversion ${esc(noteNames(T.inversionOrder(n, 2)))} (5th in the bass).`; }, tip: 'Chord inversions reorder chord tones. Interval inversions flip a two-note interval (M3 → m6). They are different ideas with the same word.', see: [['tip:triads', 'Triads'], ['tip:inversions', 'Interval inversions']] },
+  'tab:arpeggios': { what: 'An arpeggio is a chord played one note at a time.', why: 'Arpeggios connect your solos to the chords underneath, so lines land on strong notes.', where: 'Lead guitar, sweep and string-skipping technique, melodic improvisation over changes.', how: r => `${esc(T.chordSymbol(r, 'maj7'))} arpeggio = ${chordStr(r, 'maj7')} (1 3 5 7), played across the neck in five CAGED positions.`, tip: 'Target the 3rd of each chord on the chord change. It shows the listener whether the chord is major or minor.', see: [['view:builder', 'Chord builder'], ['tip:triads', 'Triads']] },
+  'tab:keys': { what: 'A key is a tonic plus a scale. This tab shows key signatures, the circle of fifths and the chords that belong to each key.', why: 'Knowing the chords in a key lets you predict progressions, transpose songs and choose scales for soloing.', where: 'Songwriting, transposing, figuring out songs, improvising.', how: r => { const k = majorKeyOf(r); return `${esc(k.name)} major has ${esc(T.keySignature(k).text.toLowerCase())}; its chords are ${esc(T.diatonicChords(k).map(d => d.triad.symbol).join(' '))}.`; }, tip: 'Major keys: chords 1, 4, 5 are major; 2, 3, 6 minor; 7 diminished.', see: [['tip:families', 'Chord families'], ['view:progressions', 'Progressions']] },
+  'tab:progressions': { what: 'A progression is a sequence of chords. Roman numerals name each chord by its scale degree.', why: 'Numerals let one progression work in every key, and most songs reuse a handful of progressions.', where: 'Songwriting, jamming, learning songs quickly, transposing for a singer.', how: r => { const k = majorKeyOf(r); const c = T.progressionChords(k, T.PROGRESSIONS[0]); return `I–V–vi–IV in ${esc(k.name)} = ${esc(c.map(x => x.symbol).join(' – '))}.`; }, tip: 'Learn numerals, not chord names: once you know I–V–vi–IV you know it in all keys.', see: [['tip:families', 'Chord families'], ['view:keys', 'Keys & circle']] },
+  'tab:rhythm': { what: 'Rhythm is when notes happen and how long they last, organised by a time signature and tempo.', why: 'Good timing matters more than any note choice. Rhythm makes a part groove and keeps a band together.', where: 'Strumming patterns, riffs, reading notation and tab with rhythm, playing with a drummer.', how: () => 'In 4/4 a quarter note = 1 beat, eighth = ½, sixteenth = ¼. Count eighths as “1 & 2 & 3 & 4 &”.', tip: 'Practise slowly with the metronome and count out loud. Speed comes from accuracy.', see: [] },
+  'tab:techniques': { what: 'Techniques are the ways you make a note sound: bends, slides, hammer-ons, vibrato and more.', why: 'Technique gives notes expression. The same melody sounds different with slides and vibrato.', where: 'Lead guitar, riffs, reading tab symbols (b, h, p, /, ~).', how: () => 'Each card shows the tab symbol, how to play it and a short synthesized demo.', tip: 'Bend to pitch: play the target note fretted first, then bend until the bent note matches it.', see: [] },
+  'tab:harmony': { what: 'Advanced harmony: extended and altered chords, and ways to borrow or substitute chords.', why: 'These tools add colour and tension beyond the basic chords of a key.', where: 'Jazz, soul, R&B, film music, reharmonising songs.', how: r => `${esc(T.chordSymbol(r, '9'))} adds the 9th (= 2nd an octave up) to ${esc(T.chordSymbol(r, '7'))}: ${chordStr(r, '9')}.`, tip: 'Extensions are just scale degrees past the octave: 9 = 2, 11 = 4, 13 = 6.', see: [['view:builder', 'Chord builder']] },
+  'tab:tips': { what: 'Compact reference for memorising patterns: intervals, inversions, scales, triads, chord families and fretboard shortcuts.', why: 'Patterns let you work out any key from a few rules instead of memorising every case.', where: 'Use it to learn the rules, then drill them in Practice and apply them in the other tabs.', how: () => 'Follow the learning order below. Each section links to its interactive tool and its Practice drill.', tip: 'Memorise the formulas first, then practise until you recognise notes and shapes without counting.', see: [] },
+  'tab:practice': { what: 'Drills with instant feedback, scores and a review list of questions you missed.', why: 'Recall practice turns rules you understand into answers you know instantly.', where: 'Daily practice: a few minutes per exercise, moving up a level when you score well.', how: () => 'Pick an exercise and level. Use “Show hint” if you are stuck; missed questions come back later for review.', tip: 'Suggested order: interval groups 0–5–7–12 → 2–4–9–11 → 1–3–8–10 → tritone → ascending/descending → inversions → scales → triads → chord families → fretboard intervals.', see: [['tip:ivgroups', 'Interval memorization'], ['tip:tips', 'Practical tips']] },
+  'tab:basics': { what: 'The starting point: string names, notes on the neck, and sharps, flats and enharmonics.', why: 'Every other tab assumes you know these names and how frets relate to semitones.', where: 'Tuning, reading tab and chord charts, finding notes.', how: () => 'Standard tuning, low to high: E A D G B E. Each fret = one semitone; fret 12 = the open note an octave higher.', tip: 'G to B is a major 3rd (4 frets); every other pair of neighbouring strings is a 4th (5 frets).', see: [['tip:fretboard', 'Fretboard shortcuts']] },
+
+  /* ---- Subsections ---- */
+  'iv-shapes': { what: 'The same interval has a fixed shape on the neck, as long as the strings are tuned the same distance apart.', why: 'Shapes let you find an interval instantly without counting frets.', where: 'Finding chord tones, playing melodies across strings, octave shapes.', how: () => 'Next string up adds 5 semitones (4 from G to B). So a P5 is 2 frets higher on the next string, and a M3 is 1 fret lower on the next string.', tip: 'Any shape that crosses the G–B pair moves one fret higher.', see: [['tip:fretboard', 'Interval shapes']] },
+  'iv-calc': { what: 'The calculator names the interval between two spelled notes, up or down.', why: 'Spelling decides the name: C–D♯ (augmented 2nd) and C–E♭ (minor 3rd) sound the same but work differently in chords.', where: 'Spelling chords correctly, reading notation, checking theory homework.', how: () => 'Count letters for the number (C D E = 3rd), then semitones for the quality (4 = major). Direction is reported separately: E4 down to C4 is still a major 3rd.', tip: 'Descending describes direction, not quality.', see: [['tip:direction', 'Ascending vs descending'], ['tip:reference', 'Enharmonic spelling']] },
+  'sc-formula': { what: 'The formula lists each note as a degree of the major scale; the steps show the whole/half-step pattern.', why: 'The formula is the same in every key, so you can build the scale from any root.', where: 'Constructing scales, comparing scales, choosing a scale over a chord.', how: r => `Natural minor = 1 2 ♭3 4 5 ♭6 ♭7: take ${esc(r.name)} major (${scaleStr(r, 'major')}) and lower 3, 6 and 7 → ${scaleStr(r, 'minor')}.`, tip: 'The highlighted character notes are what make the scale sound different from major.', see: [['tip:scales', 'Scale patterns']] },
+  'sc-positions': { what: 'Positions split the scale into hand-sized areas of the neck.', why: 'You can only play about five frets without moving your hand. Positions let you play the whole scale anywhere.', where: 'Soloing up and down the neck, connecting licks between positions.', how: () => 'Three-notes-per-string patterns move diagonally; CAGED positions line up with the C, A, G, E and D chord shapes; pentatonic boxes are the five 2-notes-per-string shapes.', tip: 'Learn one position, then the next one up, and practise sliding between them.', see: [] },
+  'sc-modes': { what: 'A mode uses the same notes as a major scale but a different home note.', why: 'Modes give different moods (Dorian, Mixolydian…) and explain relative major and minor keys.', where: 'Improvising over vamps, rock and jazz soloing, film and game music.', how: r => `${esc(r.name)} Dorian uses the notes of ${esc(T.modeParent(r, 2).name)} major, but ${esc(r.name)} is home.`, tip: 'The relative minor starts on degree 6 of its major key: same notes, different tonic.', see: [['view:keys', 'Modes table']] },
+  'ch-semis': { what: 'Count frets up from the root on one string: each degree is a fixed number of semitones.', why: 'It works on the fretboard without knowing note names.', where: 'Finding chord tones while playing, building voicings.', how: () => 'Major triad = 0 4 7, minor = 0 3 7, diminished = 0 3 6, augmented = 0 4 8. ♭7 = 10, 7 = 11.', tip: 'Use it to check a chord, but name the notes with the 3-step method so the spelling is right.', see: [['tip:triads', 'Triad semitones']] },
+  'ch-voicings': { what: 'A voicing is one way of arranging the chord tones on the guitar.', why: 'Different voicings suit different parts of the neck, songs and sounds.', where: 'Rhythm guitar, comping, choosing a shape near the previous chord.', how: () => 'Every shape here is checked: only chord tones, the root in the bass, a reachable stretch and fingers in fret order.', tip: 'Keep the 3rd and 7th; the 5th is usually safe to leave out.', see: [['view:shapes', 'Chord shapes']] },
+  'ch-formulas': { what: 'A formula lists a chord’s notes as major-scale degrees.', why: 'Every chord symbol is shorthand for a formula. Knowing them makes any chord chart readable.', where: 'Reading charts, building unfamiliar chords, transposing.', how: r => `m7 = 1 ♭3 5 ♭7 → in ${esc(r.name)}: ${chordStr(r, 'm7')}.`, tip: 'Same formula, any key: change only the root.', see: [] },
+  'fd-slash': { what: 'A slash chord names a chord over a different bass note, such as C/E.', why: 'The bass note changes how a chord sounds and can change its name.', where: 'Walking bass lines, piano-style accompaniment, reading charts.', how: () => 'C E G with E in the bass is C/E (C major, 1st inversion). C E G A over A is Am7; over C it is C6.', tip: 'Choose a bass note to see inversions and slash names.', see: [['view:inversions', 'Inversions']] },
+  'sh-open': { what: 'Open chords use open strings and sit in the first three frets.', why: 'They are the first chords most songs use and they ring fully.', where: 'Strumming, folk, pop and campfire songs.', how: () => 'C, A, G, E and D shapes are the five open shapes that the CAGED system moves up the neck.', tip: 'Learn the root of each shape: it shows you how to move the shape as a barre chord.', see: [] },
+  'sh-barre': { what: 'A barre chord uses one finger across the strings so an open shape can move anywhere.', why: 'Two shapes (E-shape and A-shape) give you every major and minor chord.', where: 'Rock and pop rhythm, songs in keys without open chords.', how: r => `E-shape root on string 6, A-shape root on string 5. ${esc(T.chordSymbol(r, 'maj'))}: put the root on ${esc(r.name)} on either string.`, tip: 'Minor barre = major barre with the 3rd lowered one fret.', see: [['tip:fretboard', 'Fretboard shortcuts']] },
+  'sh-power': { what: 'A power chord is the root and 5th, often with the octave on top.', why: 'Without a 3rd it is neither major nor minor, so it fits both and stays clear with distortion.', where: 'Rock, punk and metal riffs.', how: r => `${esc(r.name)}5 = ${esc(r.name)} + ${nn(r, '5')}: root on string 6, 5th two frets up on string 5, octave two frets up on string 4.`, tip: 'Same shape on strings 5–4–3. On strings 4–3–2 the octave moves up one fret (G–B).', see: [['tip:fretboard', 'Power chords']] },
+  'inv-voicings': { what: 'Inversions shown on three or four adjacent strings.', why: 'Small shapes on the top strings sit above the bass and band, and connect smoothly.', where: 'Funk and pop rhythm parts, second-guitar parts, chord melody.', how: () => 'Close voicing keeps the notes within an octave; drop-2 lowers the second-highest note an octave so four-note chords fit the hand.', tip: 'Move between chords using the nearest inversion: often only one or two notes change.', see: [] },
+  'arp-positions': { what: 'Each position holds the chord tones inside one CAGED scale shape.', why: 'You can switch between scale and arpeggio in the same hand position.', where: 'Soloing over chord changes.', how: () => 'Choose a position to see its frets, or the whole neck to see how the positions join.', tip: 'Say the interval names while you play them (root, 3, 5, 7) to learn where each tone is.', see: [] },
+  'k-circle': { what: 'The circle of fifths orders the 12 keys so neighbours differ by one sharp or flat.', why: 'It shows key signatures, related keys and common chord movements at a glance.', where: 'Transposing, finding the key of a song, ii–V–I and cycle progressions.', how: () => 'Clockwise = up a 5th, one more sharp (C G D A E B…). Counter-clockwise = up a 4th, one more flat (C F B♭ E♭…).', tip: 'Neighbouring keys share six of seven notes, so they mix easily.', see: [] },
+  'k-diatonic': { what: 'Diatonic chords are the chords built from a key’s own scale: its chord family.', why: 'They tell you which chords belong to a song and which numeral each chord is.', where: 'Songwriting, figuring out songs, choosing chords that fit a melody.', how: r => { const k = majorKeyOf(r); const s = T.majorScale(k); return `Stack every other note of ${esc(k.name)} major from each degree. From ${esc(s[4].name)}: ${esc(s[4].name)} ${esc(s[6].name)} ${esc(s[1].name)} = ${esc(T.diatonicChords(k)[4].triad.symbol)}, the V chord.`; }, tip: 'Major key qualities: I ii iii IV V vi vii°.', see: [['tip:families', 'Chord families']] },
+  'k-minor': { what: 'The natural minor key has the same chords as its relative major, starting from degree 6.', why: 'Minor keys are common in rock, ballads and metal, and borrow a major V for a strong resolution.', where: 'Minor-key songwriting and soloing.', how: () => 'Natural minor qualities: i ii° III iv v VI VII. Raising the 7th (harmonic minor) turns v into V.', tip: 'This table writes numerals against the major scale (♭III, ♭VI, ♭VII); Tips & Tricks shows the plain i ii° III form.', see: [['tip:families', 'Minor chord family']] },
+  'k-modes': { what: 'The seven modes start the major scale on each of its degrees.', why: 'Each mode is a scale with its own mood, using notes you already know.', where: 'Modal improvisation and composition.', how: () => 'Ionian (1), Dorian (2), Phrygian (3), Lydian (4), Mixolydian (5), Aeolian (6), Locrian (7).', tip: 'Compare each mode with the major scale on the same root to hear its character note.', see: [] },
+  'k-progs': { what: 'Common progressions written in this key.', why: 'Hearing numerals as real chords connects theory to songs.', where: 'Jamming, songwriting, ear training.', how: () => 'Tap a progression to play it in the Progressions tab.', tip: '', see: [] },
+  'k-sigs': { what: 'A key signature lists the sharps or flats a key uses.', why: 'It tells you the key at a glance and which notes are altered throughout.', where: 'Reading notation, transposing, naming keys.', how: () => 'Sharps are added in the order F C G D A E B; flats in the order B E A D G C F.', tip: 'Sharp keys: the last sharp is a half step below the key name (F♯ → G major).', see: [] },
+  'pr-roman': { what: 'Roman numerals count chords from the key’s tonic: uppercase major, lowercase minor, ° diminished.', why: 'They describe the function of each chord independent of key.', where: 'Charts, Nashville numbers, talking with other musicians.', how: r => `In ${esc(majorKeyOf(r).name)} major: I = ${esc(T.diatonicChords(majorKeyOf(r))[0].triad.symbol)}, IV = ${esc(T.diatonicChords(majorKeyOf(r))[3].triad.symbol)}, V = ${esc(T.diatonicChords(majorKeyOf(r))[4].triad.symbol)}.`, tip: 'The highlighted chord follows playback, so you can hear each numeral.', see: [] },
+  'r-values': { what: 'Note values say how long a note lasts; rests are silences of the same lengths.', why: 'They are the vocabulary of rhythm in notation and rhythmic tab.', where: 'Reading music, writing riffs, strumming patterns.', how: () => 'Whole = 4 beats, half = 2, quarter = 1, eighth = ½, sixteenth = ¼. A dot adds half the value.', tip: 'Each value is half the one before it.', see: [] },
+  'r-meter': { what: 'A time signature says how many beats are in a bar and which note gets the beat.', why: 'It sets the pulse and where the accents fall.', where: 'Every song: 4/4 rock and pop, 3/4 waltzes, 6/8 ballads.', how: () => '4/4 = four quarter-note beats. 6/8 = six eighths felt in two groups of three.', tip: 'Count out loud with the metronome: “1 & 2 &…”.', see: [] },
+  'r-count': { what: 'Counting syllables give every part of the beat a name.', why: 'Counting lets you play rhythms accurately before you can feel them.', where: 'Learning strumming patterns and riffs, sight-reading.', how: () => '“1 e & a”: 1 = the beat, & = halfway, e and a = the sixteenths between.', tip: 'Tap your foot on the numbers; play on the syllables.', see: [] },
+  'h-ext': { what: 'Extended chords stack 3rds past the 7th: 9ths, 11ths and 13ths.', why: 'They add colour while keeping the chord’s function.', where: 'Jazz, soul, neo-soul, funk.', how: r => `${esc(T.chordSymbol(r, 'maj9'))} = 1 3 5 7 9 = ${chordStr(r, 'maj9')}.`, tip: 'A 9th chord includes the 7th; without it the chord is “add9”.', see: [] },
+  'h-alt': { what: 'Altered dominants raise or lower the 5th and 9th of a dominant 7th chord.', why: 'More tension makes the resolution to the tonic stronger.', where: 'Jazz, blues turnarounds, the “Hendrix chord” (7♯9).', how: r => `${esc(T.chordSymbol(r, '7s9'))} = ${chordStr(r, '7s9')}.`, tip: 'Keep the 3rd and ♭7; they make it a dominant.', see: [] },
+  'h-sec': { what: 'A secondary dominant is the V7 of a chord other than I.', why: 'It borrows the pull of a dominant to lead strongly into that chord.', where: 'Pop, jazz, classical; any time a song briefly points at a new chord.', how: r => { const k = majorKeyOf(r); const sd = T.secondaryDominants(k)[0]; return `In ${esc(k.name)} major, ${esc(sd.label)} = ${esc(sd.symbol)}, which resolves to ${esc(sd.target)}.`; }, tip: 'Find the target chord, go up a 5th, make it a dominant 7th.', see: [] },
+  'h-borrow': { what: 'Modal interchange borrows chords from the parallel minor key.', why: 'Borrowed chords add a darker colour without leaving the key.', where: 'Rock (♭VII), pop ballads (iv), film music (♭VI).', how: r => `In ${esc(r.name)} major, iv = ${esc(T.chordSymbol(T.degreeNote(r, '4'), 'min'))} comes from ${esc(r.name)} minor.`, tip: 'IV → iv → I is a classic sad, warm ending.', see: [] },
+  'h-tri': { what: 'Tritone substitution replaces a dominant 7th with the dominant 7th a tritone away.', why: 'Both chords share the same tritone, so they resolve the same way, with a chromatic bass line.', where: 'Jazz and bossa nova turnarounds.', how: () => 'G7 (B and F) and D♭7 (F and C♭ = B) share the same tritone, so D♭7 can replace G7 before C.', tip: '', see: [['tip:ivgroups', 'Tritone']] },
+  'h-spell': { what: 'Rules for spelling chord notes with the right letter names.', why: 'Correct spelling makes charts readable and shows each note’s function.', where: 'Writing charts, notation, theory.', how: () => 'One letter per chord degree: E7♯9 is E G♯ B D F𝄪, not G.', tip: '', see: [['tip:reference', 'Enharmonic spelling']] },
+  'b-notes': { what: 'Every note on frets 0–12 in standard tuning.', why: 'Note names are the base for every scale, chord and interval.', where: 'Finding roots for barre chords and scales, reading tab.', how: () => 'Natural notes are a whole step apart except B–C and E–F, which are a half step (one fret).', tip: 'Fret 12 repeats the open string; frets 5 and 7 give the next strings’ notes.', see: [['tip:fretboard', 'Fretboard shortcuts']] },
+  'b-enh': { what: 'Enharmonic notes sound the same but are written with different letters.', why: 'The key decides the spelling, and the right spelling shows the note’s function.', where: 'Reading key signatures, spelling scales and chords.', how: () => 'F♯ and G♭ are the same pitch. In D major it is F♯ (each letter once); in D♭ major it is G♭.', tip: 'Never assume two spellings are interchangeable in theory: C–F♯ is an augmented 4th, C–G♭ a diminished 5th.', see: [] }
+};
+
+function seeLinks(see) {
+  if (!see || !see.length) return '';
+  return `<p class="learn-see"><span class="muted">Related:</span> ${see.map(([to, label]) => to.startsWith('tip:') ? `<button type="button" class="btn small ghost" data-act="gotip" data-id="${to.slice(4)}">${esc(label)}</button>` : `<button type="button" class="btn small ghost" data-view="${to.slice(5)}">${esc(label)}</button>`).join(' ')}</p>`;
+}
+/* One explanation: the “what” line is always visible; why/where/how/tip expand. */
+function learn(key, tabLevel) {
+  const L = LEARN[key]; if (!L) return '';
+  const how = typeof L.how === 'function' ? L.how(rootNote()) : L.how;
+  const body = `<dl class="learn-body"><dt>Why it matters</dt><dd>${L.why}</dd><dt>Where it’s used</dt><dd>${L.where}</dd><dt>How it works</dt><dd>${how}</dd>${L.tip ? `<dt>Tip</dt><dd>${L.tip}</dd>` : ''}</dl>${seeLinks(L.see)}`;
+  return `<details class="learn${tabLevel ? ' is-tab' : ''}" data-fold="learn:${key}"${OPEN_FOLDS.has('learn:' + key) ? ' open' : ''}><summary><span class="learn-tag">${tabLevel ? 'About this tab' : 'What is this?'}</span> ${L.what}</summary>${body}</details>`;
+}
+
+/* ---------- Tips & Tricks ---------- */
+const IV_GROUPS = [
+  { id: 'perfect', title: 'Group 1 — Perfect anchors', semis: '0 – 5 – 7 – 12', abbrs: ['P1', 'P4', 'P5', 'P8'], trick: 'These are the perfect intervals within an octave. 5 and 7 add up to 12: a 4th and a 5th together make an octave.' },
+  { id: 'major', title: 'Group 2 — Major intervals', semis: '2 – 4 – 9 – 11', abbrs: ['M2', 'M3', 'M6', 'M7'], trick: 'Major intervals are degrees 2, 3, 6 and 7 of the major scale, measured from its root.' },
+  { id: 'minor', title: 'Group 3 — Minor intervals', semis: '1 – 3 – 8 – 10', abbrs: ['m2', 'm3', 'm6', 'm7'], trick: 'Each minor interval is one semitone below its major interval: M2 2 → m2 1, M3 4 → m3 3, M6 9 → m6 8, M7 11 → m7 10.' },
+  { id: 'tritone', title: 'Special case — Tritone', semis: '6', abbrs: ['A4', 'd5'], trick: 'Six semitones is exactly half an octave. It is spelled as an augmented 4th or a diminished 5th.' }
+];
+const IV_LABEL = { P1: 'Perfect unison', P8: 'Perfect octave' };
+const ivName = i => IV_LABEL[i.abbr] || i.name.replace(/ \(tritone\)/, '');
+const SIMPLE13 = ['P1', 'm2', 'M2', 'm3', 'M3', 'P4', 'A4', 'd5', 'P5', 'm6', 'M6', 'm7', 'M7', 'P8'];
+const playBtn = (a, b, label = 'Hear') => `<button type="button" class="btn small ghost" data-act="playint" data-a="${a}" data-b="${b}">${label}</button>`;
+const practiceBtn = (ex, label, group) => `<button type="button" class="btn small" data-act="gopractice" data-ex="${ex}"${group ? ` data-group="${group}"` : ''}>${esc(label)}</button>`;
+const signed = n => n === 0 ? '0' : (n > 0 ? '+' : '−') + Math.abs(n);
+const offsetText = n => n === 0 ? 'same fret' : (n > 0 ? n + ' fret' + (n === 1 ? '' : 's') + ' higher' : -n + ' fret' + (n === -1 ? '' : 's') + ' lower');
+const TIP_SECTIONS = [
+  ['ivgroups', 'Interval memorization method'], ['reference', 'Complete interval reference'], ['direction', 'Ascending and descending intervals'], ['inversions', 'Interval inversions'],
+  ['scales', 'Major and minor scale patterns'], ['triads', 'Triads and chord construction'], ['families', 'Major and minor chord families'], ['fretboard', 'Guitar fretboard shortcuts'], ['tips', 'Practical music theory tips']
+];
+
+const TIPS = {
+  ivgroups(r) {
+    const base = nearMidi(r.pc, 48);
+    const groups = IV_GROUPS.map(g => {
+      const rows = g.abbrs.map(a => { const i = T.INTERVALS.find(x => x.abbr === a); return [String(i.semis), `<b>${esc(i.abbr)}</b>`, esc(ivName(i)), `${esc(r.name)} → ${nn(r, i.degree)}`, playBtn(base, base + i.semis)]; });
+      return `<h3>${esc(g.title)}: <span class="seq">${g.semis}</span></h3>${table(['Semitones', 'Interval', 'Name', `From ${esc(r.name)}`, ''], rows)}<p class="trick"><b>Memory trick:</b> ${esc(g.trick)}</p>${g.id === 'tritone' ? `<ul class="compact"><li><b>A4</b> = augmented 4th: ${esc(r.name)} → ${nn(r, '♯4')} (a 4th letter name, raised).</li><li><b>d5</b> = diminished 5th: ${esc(r.name)} → ${nn(r, '♭5')} (a 5th letter name, lowered).</li><li>Both are 6 semitones in twelve-tone equal temperament, so they sound the same on guitar. Their spellings differ because the letter count differs.</li><li>Six semitones divides the octave exactly in half: a tritone above or below a note lands on the same pitch class.</li></ul>` : ''}<p>${practiceBtn('ivgroups', 'Practise this group', g.id)}</p>`;
+    }).join('');
+    return `<p>Learn intervals in four small groups instead of thirteen separate facts. Learning order: <b class="seq">0–5–7–12 → 2–4–9–11 → 1–3–8–10 → 6 → mixed</b>.</p>${groups}<p>${practiceBtn('ivgroups', 'Mixed practice (all groups)', 'mixed')}</p>`;
+  },
+  reference(r) {
+    const rows = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(s => { const ivs = T.INTERVALS.filter(x => x.semis === s && SIMPLE13.includes(x.abbr)); return [String(s), `<b>${esc(ivs.map(i => i.abbr).join(' / '))}</b>`, esc(ivs.map(ivName).join(' / ')), esc(ivs.map(i => T.degreeNote(r, i.degree).name).join(' / '))]; });
+    return `${table(['Semitones', 'Interval', 'Name', `Above ${esc(r.name)}`], rows)}
+      <dl class="facts">
+        <dt>Counting</dt><dd>Semitone distance starts at <b>0</b> (a note to itself). Interval numbers and scale degrees start at <b>1</b>: the starting note is “1”, so C to E is a 3rd (C D E), not a 2nd.</dd>
+        <dt>P1 and P8</dt><dd>P1 = unison (the same note, 0 semitones). P8 = octave (the same letter, 12 semitones higher).</dd>
+        <dt>Root vs tonic</dt><dd>The <b>tonic</b> is the home note of a key or scale. The <b>root</b> is the note a chord is built on. In C major, the G chord has root G, but the key’s tonic is still C.</dd>
+        <dt>Number vs quality</dt><dd>The <b>number</b> comes from counting letter names (C–E = 3rd). The <b>quality</b> comes from semitones (4 = major, 3 = minor). C–E and C–E♭ are both 3rds, with different qualities.</dd>
+        <dt>Qualities</dt><dd><b>Perfect</b>: unison, 4th, 5th, octave. <b>Major/minor</b>: 2nds, 3rds, 6ths, 7ths (minor = one semitone smaller). <b>Augmented</b>: one semitone larger than perfect or major. <b>Diminished</b>: one semitone smaller than perfect or minor.</dd>
+        <dt>Enharmonic spelling</dt><dd>C–D♯ (A2) and C–E♭ (m3) are both 3 semitones but different intervals, because the letters differ. Choose the spelling that fits the key or chord.</dd>
+      </dl><p><button type="button" class="btn small" data-view="intervals">Open the interval table and calculator</button></p>`;
+  },
+  direction() {
+    const ex = [['C', 4, 'E', 4], ['C', 4, 'G', 4], ['E', 4, 'C', 4], ['C', 4, 'A', 3], ['G', 4, 'C', 4]];
+    const rows = ex.map(([a, o1, b, o2]) => { const res = T.intervalBetween(a, o1, b, o2); const d = res.descending ? -res.semis : res.semis; return [`${esc(a)}${o1} → ${esc(b)}${o2}`, `<b>${esc(res.abbr)}</b>`, res.descending ? 'Descending' : 'Ascending', signed(d), playBtn(T.midiOf(a, o1), T.midiOf(b, o2))]; });
+    return `<p>An interval has a <b>size</b> (number and quality) and a <b>direction</b> (up or down). They are separate properties.</p>
+      ${table(['Notes', 'Interval', 'Direction', 'Semitones', ''], rows)}
+      <ul class="compact"><li>Descending does <b>not</b> mean minor: E4 → C4 is still a <b>major</b> 3rd.</li><li>Descending does <b>not</b> mean diminished.</li><li>Descending is <b>not</b> automatically an inversion: an inversion moves one note by an octave (see the next section).</li></ul>
+      <h3>On the guitar</h3><ul class="compact"><li>One fret higher = +1 semitone; one fret lower = −1.</li><li>Twelve frets = one octave.</li><li>Standard tuning: E A D G B E. Neighbouring strings are a P4 (5 semitones) apart, except G–B, a M3 (4 semitones).</li><li>So the tuning changes interval shapes across strings: any shape that crosses G–B moves one fret.</li></ul>
+      <p><button type="button" class="btn small" data-view="intervals">Try directions in the calculator</button> ${practiceBtn('direction', 'Practise ascending and descending')}</p>`;
+  },
+  inversions() {
+    const rows = ['M2', 'M3', 'm3', 'P4', 'M7', 'd5'].map(a => { const i = T.INTERVALS.find(x => x.abbr === a), v = T.invertInterval(a); return [`<b>${esc(a)}</b> (${i.semis})`, `<b>${esc(v.abbr)}</b> (${v.semis})`, `${i.semis} + ${v.semis} = 12`]; });
+    const up = T.intervalBetween('C', 4, 'E', 4), down = T.intervalBetween('E', 4, 'C', 4), inv = T.intervalBetween('E', 4, 'C', 5);
+    return `<p>To invert an interval, move its lower note up an octave (or its upper note down an octave).</p>
+      <dl class="facts"><dt>Rule 1</dt><dd>Interval numbers add to <b>9</b>: 1 ↔ 8, 2 ↔ 7, 3 ↔ 6, 4 ↔ 5.</dd><dt>Rule 2</dt><dd>Qualities swap: major ↔ minor, perfect ↔ perfect, augmented ↔ diminished.</dd><dt>Rule 3</dt><dd>Semitones add to <b>12</b>.</dd></dl>
+      ${table(['Original', 'Inversion', 'Check'], rows)}
+      <p class="muted">The add-to-12 rule is for simple intervals (an octave or less) inverted within the octave.</p>
+      <h3>Descending vs inversion</h3>${table(['Notes', 'Interval', 'What happened'], [['C4 → E4', `${esc(up.abbr)} (+${up.semis})`, 'Ascending'], ['E4 → C4', `${esc(down.abbr)} (−${down.semis})`, 'Same two notes, played downward: still a M3'], ['E4 → C5', `${esc(inv.abbr)} (+${inv.semis})`, 'C moved up an octave: the inversion of C4 → E4']])}
+      <p>A descending interval keeps the same notes and changes direction. An inversion changes which note is on top by moving one note an octave, so the size changes (M3 → m6).</p>
+      <p>${practiceBtn('ivinvert', 'Practise interval inversions')}</p>`;
+  },
+  scales(r) {
+    const mj = T.scaleNotes(r, 'major'), mn = T.scaleNotes(r, 'minor'); const changed = ['♭3', '♭6', '♭7'];
+    return `${table(['', 'Major', 'Natural minor'], [['Steps', 'W W H W W W H', 'W H W W H W W'], ['Semitones', '0 2 4 5 7 9 11 12', '0 2 3 5 7 8 10 12'], ['Intervals', 'P1 M2 M3 P4 P5 M6 M7 P8', 'P1 M2 m3 P4 P5 m6 m7 P8'], ['Degrees', '1 2 3 4 5 6 7 8', '1 2 ♭3 4 5 ♭6 ♭7 8'], [`In ${esc(r.name)}`, esc(noteNames(mj)), esc(noteNames(mn))]])}
+      <p class="trick"><b>Memory trick:</b> natural minor = the parallel major with the 3rd, 6th and 7th lowered.</p>
+      <div class="cmp">${mn.map((n, i) => `<span class="${changed.includes(T.getScale('minor').degrees[i]) ? 'is-alt' : ''}"><small>${esc(T.getScale('minor').degrees[i])}</small><b>${esc(n.name)}</b><em>${esc(mj[i].name)}</em></span>`).join('')}</div>
+      <p class="muted">Top: ${esc(r.name)} natural minor. Bottom: ${esc(r.name)} major. Highlighted notes are lowered.</p>
+      <h3>Build any major or minor scale</h3><ol class="steps"><li>Write the seven letters starting on the root: ${esc(T.LETTERS.slice(r.l).concat(T.LETTERS.slice(0, r.l)).join(' '))}.</li><li>Walk the step pattern from the root (W = 2 frets, H = 1 fret) and add ♯ or ♭ so each letter lands on the right pitch.</li><li>Use each letter exactly once. That is why ${esc(T.parseNote('F').name)} major has B♭, not A♯.</li></ol>
+      <p><button type="button" class="btn small" data-act="goscale" data-scale="major">Open ${esc(r.name)} major in Scales</button> <button type="button" class="btn small" data-act="goscale" data-scale="minor">Open ${esc(r.name)} natural minor</button> ${practiceBtn('scalebuild', 'Practise building scales')}</p>`;
+  },
+  triads(r) {
+    const rows = [['maj', 'Major', 'M3 + m3'], ['min', 'Minor', 'm3 + M3'], ['dim', 'Diminished', 'm3 + m3'], ['aug', 'Augmented', 'M3 + M3']].map(([id, name, st]) => { const c = T.getChord(id); return [`<b>${name}</b>`, esc(c.degrees.join('–')), c.degrees.map(d => T.degreeSemis(d)).join('–'), st, esc(T.chordSymbol(r, id)) + ' = ' + chordStr(r, id)]; });
+    const n = T.chordNotes(r, 'maj');
+    return `<p>A triad is three different notes built by stacking two 3rds: a root, a 3rd above it, and a 5th above the root.</p>
+      ${table(['Triad', 'Formula', 'Semitones', 'Stacked 3rds', `On ${esc(r.name)}`], rows)}
+      <dl class="facts"><dt>Root</dt><dd>The note the chord is named after and built on.</dd><dt>Third</dt><dd>Decides major (M3) or minor (m3): the most important note for the chord’s sound.</dd><dt>Fifth</dt><dd>Perfect in major and minor, lowered in diminished, raised in augmented.</dd><dt>Quality</dt><dd>Major, minor, diminished or augmented: set by the two 3rds.</dd></dl>
+      <h3>Triad inversions (${esc(T.chordSymbol(r, 'maj'))})</h3>${table(['Position', 'Bass', 'Low to high'], [['Root position', 'Root', esc(noteNames(n))], ['1st inversion', '3rd', esc(noteNames(T.inversionOrder(n, 1)))], ['2nd inversion', '5th', esc(noteNames(T.inversionOrder(n, 2)))]])}
+      <p class="note">Chord inversion = which chord tone is in the bass; the chord keeps its name. Interval inversion = flipping a two-note interval so its size changes (M3 ↔ m6).</p>
+      <p class="trick"><b>Tip:</b> lower the 3rd of a major triad one semitone (one fret) to get minor.</p>
+      <p><button type="button" class="btn small" data-view="builder">Chord builder</button> <button type="button" class="btn small" data-view="inversions">Inversions</button> ${practiceBtn('triad', 'Practise triads')}</p>`;
+  },
+  families(r) {
+    const k = majorKeyOf(r), m = minorKeyOf(r); const dm = T.diatonicChords(k), dn = T.diatonicChords(m, 'minor'); const ms = T.majorScale(k);
+    const row = d => d.map((x, i) => `<span class="fam"><small>${esc(romanFor(i, x.triad.quality))}</small><b>${esc(x.triad.symbol)}</b><em>${esc(x.triad.quality)}</em></span>`).join('');
+    return `<h3>Major key: I – ii – iii – IV – V – vi – vii°</h3><div class="fams">${row(dm)}</div><p class="muted">${esc(k.name)} major. Memory trick: 1, 4, 5 major · 2, 3, 6 minor · 7 diminished.</p>
+      <h3>Natural minor key: i – ii° – III – iv – v – VI – VII</h3><div class="fams">${row(dn)}</div>
+      <p class="muted">${esc(m.name)} natural minor. Minor-key songs often raise the 7th degree (harmonic minor), which makes v major: <b>${esc(T.chordSymbol(T.degreeNote(m, '5'), 'maj'))}</b> (V) or <b>${esc(T.chordSymbol(T.degreeNote(m, '5'), '7'))}</b> (V7), for a stronger pull back to ${esc(m.name)}m.</p>
+      <h3>Build a chord family</h3><ol class="steps"><li>Choose a key: ${esc(k.name)} major.</li><li>Write its scale: ${esc(noteNames(ms))}.</li><li>Choose a degree, for example 5.</li><li>That note is the chord root: ${esc(ms[4].name)}.</li><li>Take every other scale note: ${esc(ms[4].name)} – ${esc(ms[6].name)} – ${esc(ms[1].name)} (1–3–5 from ${esc(ms[4].name)}).</li><li>Check the 3rds: that is <b>${esc(dm[4].triad.symbol)}</b>, the V chord.</li></ol>
+      <p class="note"><b>Tonic vs chord root:</b> the tonic (${esc(k.name)}) is the home of the whole key. Each chord has its own root. ${esc(dm[4].triad.symbol)} has root ${esc(ms[4].name)}, but it still belongs to the key of ${esc(k.name)}.</p>
+      <p><button type="button" class="btn small" data-view="keys">Diatonic chords in Keys & circle</button> ${practiceBtn('family', 'Practise chord families')}</p>`;
+  },
+  fretboard(r) {
+    const std = T.TUNINGS[0];
+    const oct = [[0, 2], [1, 3], [2, 4], [3, 5]].map(([a, b]) => {
+      const fa = T.mod(r.pc - std.midi[a]); const fb = fa + 12 - (std.midi[b] - std.midi[a]);
+      const m = {}; m[a + ':' + fa] = { cls: 'root', label: r.name }; m[b + ':' + fb] = { cls: 'tone', label: '8' };
+      const lo = Math.max(0, Math.min(fa, fb) - 1), hi = Math.max(fa, fb) + 1;
+      return `<figure class="vcard octfig">${Render.fretboard({ tuning: std, min: lo, max: Math.max(hi, lo + 3), markers: m, compact: true, label: `Octave from string ${6 - a} to string ${6 - b}` })}<figcaption><b>String ${6 - a} → ${6 - b}</b><span class="muted">${offsetText(fb - fa)}${b === 4 || b === 5 ? ' (crosses G–B)' : ''}</span></figcaption></figure>`;
+    }).join('');
+    const shapes = ['m3', 'M3', 'P4', 'A4', 'P5', 'P8'].map(a => { const i = T.INTERVALS.find(x => x.abbr === a); return [`<b>${a === 'A4' ? 'A4 / d5' : esc(a)}</b>`, String(i.semis), offsetText(i.semis), offsetText(i.semis - 5), offsetText(i.semis - 4), offsetText(5 - i.semis)]; });
+    const rf = T.mod(r.pc - std.midi[1]) || 12; const mk = degreeMarkers(['1', '♭3', '3', '4', '♭5', '5'], { min: Math.max(0, rf - 3), max: rf + 4 });
+    const pw = T.chordVoicings(r, 'pow', std);
+    return `<h3>Essential rules</h3><ul class="compact"><li>One fret = one semitone; twelve frets = one octave.</li><li>Standard tuning: E A D G B E (low to high).</li><li>Neighbouring strings are a perfect 4th apart (5 frets) except G–B, a major 3rd (4 frets).</li><li>Every note repeats on other strings and in other octaves; the same pitch can be played in up to five or six places.</li></ul>
+      <h3>Octave shapes (${esc(r.name)})</h3><p>Two strings up, two frets higher, except when the shape crosses G–B: then it is three frets higher.</p><div class="boxes octs">${oct}</div>
+      <h3>Interval shapes</h3>${table(['Interval', 'Semitones', 'Same string', 'Next string up', 'Next string up across G–B', 'Next string down (descending)'], shapes)}
+      <p class="muted">Descending on the same string: the same number of frets lower. Descending across B→G: ${esc(offsetText(4 - 5))} than the column on the right.</p>
+      <p>Intervals around ${esc(r.name)} on the 5th string (labels follow the Labels setting):</p>${fretboardBlock('tips-iv', mk, { min: Math.max(0, rf - 3), max: rf + 4, fixedRange: true, noTools: true, spell: speller([]), label: 'Intervals from the root' })}
+      <h3>Power chords</h3><p>Root + perfect 5th, often with the octave doubled on top: ${esc(r.name)}5 = ${esc(r.name)} ${nn(r, '5')} ${esc(r.name)}. There is no 3rd, so a power chord is neither major nor minor and fits either.</p>
+      ${pw.length ? `<div class="boxes">${pw.slice(0, 2).map(v => `<figure class="vcard">${Render.chordBox(v, { showDegrees: true, label: r.name + '5 ' + v.name })}<figcaption><b>${esc(v.name)}</b><button class="btn small" type="button" data-act="strum" data-m="${v.midi.map(m => m == null ? '' : m).join(',')}">Play</button></figcaption></figure>`).join('')}</div>` : ''}
+      <p><button type="button" class="btn small" data-view="fretboard">Open the fretboard explorer</button> <button type="button" class="btn small" data-act="goshape">Power chords in Chord shapes</button> ${practiceBtn('fbinterval', 'Practise fretboard intervals')}</p>`;
+  },
+  tips() {
+    const list = ['Perfect intervals: 0 – 5 – 7 – 12.', 'Major intervals: 2 – 4 – 9 – 11.', 'Minor intervals: 1 – 3 – 8 – 10.', 'Tritone: 6 semitones (A4 or d5).', 'Minor intervals are one semitone below their major intervals.', 'Descending describes direction, not quality.', 'Interval inversion numbers add to 9.', 'Inversion qualities swap: M ↔ m, A ↔ d, P stays P.', 'Simple intervals and their inversions add to 12 semitones.', 'Major scale: W – W – H – W – W – W – H.', 'Natural minor: 1 – 2 – ♭3 – 4 – 5 – ♭6 – ♭7.', 'Major triad: 0 – 4 – 7.', 'Minor triad: 0 – 3 – 7.', 'Diminished triad: 0 – 3 – 6.', 'Augmented triad: 0 – 4 – 8.', 'Major chord family: I – ii – iii – IV – V – vi – vii°.', 'Tonic and chord root can be different notes.', 'One fret equals one semitone.', 'Memorise formulas first, then develop instant note recognition.', 'Learn real note names on the fretboard alongside interval shapes.'];
+    return `<ol class="tipcards">${list.map(t => `<li>${esc(t)}</li>`).join('')}</ol>`;
+  }
+};
+
+Views.tips = () => {
+  const r = rootNote();
+  return card('Tips & Tricks', `<p class="lede">Patterns and shortcuts for memorising theory. Examples use the root selected at the top (${esc(S.root)}).</p>
+    <div class="chips order" role="group" aria-label="Learning order">${TIP_SECTIONS.map(([id, label], i) => `<button type="button" class="chip" data-act="gotip" data-id="${id}"><b>${i + 1}</b> ${esc(label)}</button>`).join('')}</div>
+    ${TIP_SECTIONS.map(([id, label], i) => fold('tip:' + id, `<span class="stepn">${i + 1}</span>${esc(label)}`, TIPS[id](r), 'tipsec')).join('')}`);
+};
+actions.gotip = el => {
+  const id = el.dataset.id; OPEN_FOLDS.add('tip:' + id);
+  const go = () => { const d = document.querySelector(`[data-fold="tip:${id}"]`); if (d) { d.open = true; d.scrollIntoView({ block: 'start', behavior: 'smooth' }); } };
+  if (S.view !== 'tips') switchView('tips'); else render();
+  go();
+};
+actions.gopractice = el => { S.practice.ex = el.dataset.ex; if (el.dataset.group) S.practice.group = el.dataset.group; P.q = null; switchView('practice'); };
+actions.goscale = el => { S.scale = el.dataset.scale; S.pos = 'all'; switchView('scales'); };
+actions.goshape = () => { S.chord = 'pow'; S.voicing = 0; switchView('shapes'); };
+
+/* Every tab opens with its short introduction (above the tab quiz). */
+VALID.view.forEach(id => { const v = Views[id]; if (!v || !LEARN['tab:' + id]) return; Views[id] = () => { const main = v(); return `<div class="tab-intro">${learn('tab:' + id, true)}</div>` + main; }; });
 
 /* ---- start ---- */
 try { boot(); } catch (e) { console.error(e); var b = document.getElementById('boot'); if (b) { b.querySelector('h2').textContent = 'The app could not start'; var p = document.createElement('p'); p.textContent = 'Error: ' + e.message; b.insertBefore(p, b.children[1]); } }

@@ -55,6 +55,7 @@ Views.scales = () => {
     <div class="row"><label>Scale ${scaleSelect('scale', S.scale)}</label>
       <button class="btn" type="button" data-act="playscale">Play ${pos ? 'this position' : 'one octave'}</button>
       ${sc.descending ? `<button class="btn ghost" type="button" data-act="playscale" data-dir="down">Play descending form</button>` : ''}</div>
+    ${learn('sc-formula')}
     <dl class="facts">
       <dt>Formula</dt><dd class="formula">${sc.degrees.map(d => `<span class="${sc.char.includes(d) ? 'char' : ''}">${esc(d)}</span>`).join(' ')}</dd>
       <dt>Notes</dt><dd>${pills(notes, sc.degrees, { blue: sc.blue })}</dd>
@@ -65,7 +66,9 @@ Views.scales = () => {
       ${parent ? `<dt>Mode of</dt><dd>${esc(T.MODE_NAMES[sc.mode - 1])} is mode ${sc.mode} of <b>${esc(parent.name)} major</b>: same notes, but ${esc(S.root)} is home. Starting ${esc(parent.name)} major on ${esc(S.root)} is not enough to hear it; the tonal centre must be ${esc(S.root)}.</dd>` : ''}
       ${rel ? `<dt>Related key</dt><dd>${rel}</dd>` : ''}
     </dl>
+    ${parent || rel ? learn('sc-modes') : ''}
     <h3>Positions</h3>
+    ${learn('sc-positions')}
     <div class="chips" role="group" aria-label="Scale positions"><button type="button" class="chip${!pos ? ' is-on' : ''}" data-act="pos" data-id="all">Whole neck</button>
       ${kinds.map(k => `<span class="chip-group">${kindName[k]}</span>` + positions.filter(p => p.kind === k).map(p => `<button type="button" class="chip${pos === p ? ' is-on' : ''}" data-act="pos" data-id="${p.id}">${esc(p.label.replace('3NPS pattern ', '').replace('CAGED ', '').replace('Box ', ''))}</button>`).join('')).join('')}</div>
     ${pos ? `<div class="pos-head"><button class="btn ghost" type="button" data-act="posstep" data-d="-1" aria-label="Previous position">‹</button><div><b>${esc(pos.label)}</b><br><span class="muted">${esc(pos.sub)} · frets ${pos.range[0]}–${pos.range[1]}</span></div><button class="btn ghost" type="button" data-act="posstep" data-d="1" aria-label="Next position">›</button></div>` : ''}
@@ -109,11 +112,13 @@ Views.intervals = () => {
     ${table(['Interval', 'Symbol', 'Semitones', 'Frets on one string', `From ${esc(S.root)}`], T.INTERVALS.map(x => ({ attrs: ` class="${x.abbr === row.abbr ? 'is-sel' : ''}" data-act="introw" data-abbr="${x.abbr}" tabindex="0" role="button"`, cells: [esc(x.name), esc(x.abbr) + ' <span class="muted">(' + esc(x.degree) + ')</span>', x.semis, x.semis, esc(T.degreeNote(r, x.degree).name)] })), 'clicky')}
   `) + card(`${esc(row.name)}: ${esc(S.root)} → ${esc(target.name)}`, `
     <div class="row"><button class="btn" type="button" data-act="playint" data-a="${nearMidi(r.pc, 48)}" data-b="${nearMidi(r.pc, 48) + row.semis}">Play melodic</button><button class="btn ghost" type="button" data-act="playint" data-a="${nearMidi(r.pc, 48)}" data-b="${nearMidi(r.pc, 48) + row.semis}" data-h="1">Play together</button></div>
+    ${learn('iv-shapes')}
     <p>${row.semis} semitone${row.semis === 1 ? '' : 's'}. ${row.semis > 12 ? `Compound interval: an octave plus ${row.semis - 12}.` : ''} Shape across strings (${esc(tun.name)}):</p>
     <ul class="compact">${pairs}</ul>
     ${fretboardBlock('interval', markers, { min: 0, max: 15, fixedRange: true, spell: speller([r, target]) })}
     <p class="legend"><i class="lg root"></i>${esc(S.root)} <i class="lg tone"></i>${esc(target.name)}</p>`)
     + card('Interval calculator', `
+    ${learn('iv-calc')}
     <p class="muted">Pick two spelled notes. Enharmonic spellings give different interval names for the same sound.</p>
     <div class="row">${notePicker('intA')}<span aria-hidden="true">→</span>${notePicker('intB')}<button class="btn" type="button" data-act="playint" data-a="${T.midiOf(a, S.intA.o)}" data-b="${T.midiOf(b, S.intB.o)}">Play</button></div>
     <p class="big">${esc(a.name)}${S.intA.o} to ${esc(b.name)}${S.intB.o}: <b>${esc(res.name)}</b> (${esc(res.abbr)}, ${res.semis} semitones${res.descending ? ', descending' : ''})</p>
@@ -161,10 +166,10 @@ Views.builder = () => {
     <h3><span class="stepn">3</span> Apply the accidentals: ♭ lowers a half step (one fret), ♯ raises one</h3>
     <div class="tiles">${step3}</div>
     <p class="muted">Letters stay in order (one per degree), which is why ${esc(T.chordSymbol(T.parseNote('E'), '7s9'))} contains F𝄪 rather than G.</p>`)
-    + card('The semitone method', `<p class="lede">Count frets up from the root: ${c.degrees.map((d, i) => `${esc(d)} = ${sem[i]}`).join(' · ')}.</p><div class="semis">${semCells}</div>`)
+    + card('The semitone method', `${learn('ch-semis')}<p class="lede">Count frets up from the root: ${c.degrees.map((d, i) => `${esc(d)} = ${sem[i]}`).join(' · ')}.</p><div class="semis">${semCells}</div>`)
     + card(`${esc(sym)} on the fretboard`, `<div class="row"><label class="chk"><input type="checkbox" data-set="colorByInterval" ${S.colorByInterval ? 'checked' : ''}> Colour by interval</label></div>${fretboardBlock('builder', markers, { spell: speller(notes) })}${legend(S.colorByInterval)}<p class="muted">Pick one of each note on nearby strings to make your own voicing.</p>`)
-    + card('Playable voicings', voicings.length ? `<div class="boxes">${voicings.map((v, i) => voicingCard(v, r, c, i)).join('')}</div>` : `<p class="note">No stored voicing for ${esc(sym)} in ${esc(tun.name)} passes the playability check. Use the fretboard map above to build one.</p>`)
-    + card('Reference', details('Degree → semitones', table(['Degree', 'Semitones', 'Interval'], [['1', '0', 'Unison'], ['♭2 / ♭9', '1 (13)', 'Minor 2nd'], ['2 / 9', '2 (14)', 'Major 2nd'], ['♯2 / ♯9', '3 (15)', 'Augmented 2nd'], ['♭3', '3', 'Minor 3rd'], ['3', '4', 'Major 3rd'], ['4 / 11', '5 (17)', 'Perfect 4th'], ['♯4 / ♯11', '6 (18)', 'Augmented 4th'], ['♭5', '6', 'Diminished 5th'], ['5', '7', 'Perfect 5th'], ['♯5', '8', 'Augmented 5th'], ['♭6 / ♭13', '8 (20)', 'Minor 6th'], ['6 / 13', '9 (21)', 'Major 6th'], ['𝄫7', '9', 'Diminished 7th'], ['♭7', '10', 'Minor 7th'], ['7', '11', 'Major 7th']]))
+    + card('Playable voicings', learn('ch-voicings') + (voicings.length ? `<div class="boxes">${voicings.map((v, i) => voicingCard(v, r, c, i)).join('')}</div>` : `<p class="note">No stored voicing for ${esc(sym)} in ${esc(tun.name)} passes the playability check. Use the fretboard map above to build one.</p>`))
+    + card('Reference', learn('ch-formulas') + details('Degree → semitones', table(['Degree', 'Semitones', 'Interval'], [['1', '0', 'Unison'], ['♭2 / ♭9', '1 (13)', 'Minor 2nd'], ['2 / 9', '2 (14)', 'Major 2nd'], ['♯2 / ♯9', '3 (15)', 'Augmented 2nd'], ['♭3', '3', 'Minor 3rd'], ['3', '4', 'Major 3rd'], ['4 / 11', '5 (17)', 'Perfect 4th'], ['♯4 / ♯11', '6 (18)', 'Augmented 4th'], ['♭5', '6', 'Diminished 5th'], ['5', '7', 'Perfect 5th'], ['♯5', '8', 'Augmented 5th'], ['♭6 / ♭13', '8 (20)', 'Minor 6th'], ['6 / 13', '9 (21)', 'Major 6th'], ['𝄫7', '9', 'Diminished 7th'], ['♭7', '10', 'Minor 7th'], ['7', '11', 'Major 7th']]))
       + details(`Chord formula library in ${esc(S.root)}`, table(['Chord', 'Symbol', 'Formula', 'Notes'], T.CHORDS.map(x => ({ attrs: ` data-act="pickchord" data-id="${x.id}" class="${x.id === c.id ? 'is-sel' : ''}" tabindex="0" role="button"`, cells: [esc(x.name), esc(T.chordSymbol(r, x)), esc(x.degrees.join(' ')), esc(noteNames(T.chordNotes(r, x)))] })), 'clicky'), true)
       + details(`Same formula, any key: ${esc(c.name)}`, table(['Key', 'Symbol', 'Notes'], T.CIRCLE.map(k => [esc(k), esc(T.chordSymbol(k, c)), esc(noteNames(T.chordNotes(k, c)))]))));
 };
@@ -203,6 +208,7 @@ Views.finder = () => {
   return card('Name a chord', `
     <p class="lede">Select the notes you hear or play, either with the buttons or by tapping the fretboard. Choose a bass note to get inversions and slash chords.</p>
     <div class="notebtns" role="group" aria-label="Notes">${range0(0, 11).map(pc => `<button type="button" class="nb${sel.includes(pc) ? ' is-on' : ''}" data-act="finder" data-pc="${pc}" aria-pressed="${sel.includes(pc)}">${esc(pcLabel(pc))}</button>`).join('')}</div>
+    ${learn('fd-slash')}
     <div class="row"><label>Bass note <select data-ch="finderbass"><option value="">Lowest = root (any)</option>${sel.map(pc => `<option value="${pc}"${pc === bass ? ' selected' : ''}>${esc(pcLabel(pc))}</option>`).join('')}</select></label>
       <button class="btn ghost" type="button" data-act="finderclear">Clear</button>
       <span class="muted">Try:</span>${[['D F A C', [2, 5, 9, 0]], ['C E G A', [0, 4, 7, 9]], ['E G C', [4, 7, 0]], ['G B D F', [7, 11, 2, 5]], ['C E♭ G♭ A', [0, 3, 6, 9]]].map(([l, p]) => `<button class="btn small ghost" type="button" data-act="finderpreset" data-p="${p.join(',')}">${l}</button>`).join('')}</div>
@@ -227,10 +233,11 @@ Views.shapes = () => {
   return card(`${esc(T.chordSymbol(r, c))} shapes`, `
     <div class="row"><label>Chord ${chordSelect('chord', S.chord)}</label></div>
     <p class="lede">× = don’t play · ○ = open string · numbers = fingers · red = root. Every shape is checked: only chord tones, root in the bass, at most a four-fret stretch, fingers in fret order.</p>
+    ${c.id === 'pow' ? learn('sh-power') : ''}
     ${vs.length ? `<div class="boxes">${vs.map((v, i) => voicingCard(v, r, c, i)).join('')}</div>` : `<p class="note">No stored shape for this chord passes the checks in ${esc(tun.name)}.</p>`}
     ${!tuningIsStdShape() ? `<p class="note">${esc(tun.name)} changes some string intervals. Shapes that relied on the old interval were re-fretted or dropped if they became unplayable.</p>` : ''}`)
-    + card(`Barre chords in ${esc(S.root)}: slide the shape, root fret = chord name`, barre ? `<div class="boxes">${barre}</div>` : '<p class="empty">No barre shapes in this tuning.</p>')
-    + card('Open chord library (standard tuning)', `<div class="boxes">${openCards}</div>`);
+    + card(`Barre chords in ${esc(S.root)}: slide the shape, root fret = chord name`, learn('sh-barre') + (barre ? `<div class="boxes">${barre}</div>` : '<p class="empty">No barre shapes in this tuning.</p>'))
+    + card('Open chord library (standard tuning)', `${learn('sh-open')}<div class="boxes">${openCards}</div>`);
 };
 
 /* ---------- Inversions ---------- */
@@ -259,7 +266,7 @@ Views.inversions = () => {
     <dl class="facts"><dt>Symbol</dt><dd class="big"><b>${esc(sym)}</b></dd><dt>Bass note</dt><dd>${esc(order[0].name)} (the ${esc(degOrder[0])})</dd><dt>Order, low to high</dt><dd>${pills(order, degOrder)}</dd>
       <dt>All inversions</dt><dd>${names.slice(0, n).map((nm, i) => `${nm}: ${esc(T.inversionOrder(notes, i).map(x => x.name).join(' '))}`).join('<br>')}</dd></dl>
     <p class="muted">Same chord tones, different bass. The chord name stays ${esc(T.chordSymbol(r, c))}; slash notation shows the bass. ${n === 4 ? 'Four-note voicings on adjacent strings are shown as close or drop-2 voicings, the playable forms guitarists use.' : 'Triads are shown in close position on each set of three adjacent strings.'}</p>`)
-    + card('Voicings on adjacent string sets', cards ? `<div class="boxes">${cards}</div>` : '<p class="empty">No playable voicing found in this tuning.</p>');
+    + card('Voicings on adjacent string sets', learn('inv-voicings') + (cards ? `<div class="boxes">${cards}</div>` : '<p class="empty">No playable voicing found in this tuning.</p>'));
 };
 actions.inv = el => { S.inv = +el.dataset.i; render(); };
 actions.invcompare = () => {
@@ -284,6 +291,7 @@ Views.arpeggios = () => {
       <button class="btn" type="button" data-act="playarp">Play up and down</button>
       <label class="chk"><input type="checkbox" data-set="colorByInterval" ${S.colorByInterval ? 'checked' : ''}> Colour by interval</label></div>
     <dl class="facts"><dt>Formula</dt><dd class="formula">${esc(c.degrees.join(' '))}</dd><dt>Notes</dt><dd>${pills(notes, c.degrees)}</dd></dl>
+    ${learn('arp-positions')}
     <div class="chips"><button type="button" class="chip${!pos ? ' is-on' : ''}" data-act="arppos" data-id="all">Whole neck</button>${ps.map(p => `<button type="button" class="chip${p === pos ? ' is-on' : ''}" data-act="arppos" data-id="${p.id}">${esc(p.label)}</button>`).join('')}</div>
     ${pos ? `<p class="muted">${esc(pos.label)} arpeggio, ${esc(pos.sub)}: the chord tones inside the matching CAGED scale position.</p>` : ''}
     ${fretboardBlock('arp', markers, { min, max, fixedRange: !!pos, spell: speller(notes) })}${legend(S.colorByInterval)}`)

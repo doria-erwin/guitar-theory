@@ -52,7 +52,24 @@ Tests: **U** = engine unit test (`tests/theory.test.js`), **E** = browser test (
 | Tunings: E, E♭, Drop D, D, Drop C♯, Drop C, Drop B, custom | Done | U, E |
 | 7 3NPS, 5 CAGED, 5 boxes; navigation; fingers; chord rings | Done | U (counts for every root, scale and tuning), E |
 | Practice: 10 exercises, 3 levels, feedback, score, review, saved, reset | Done | E (answer hidden before submit, score, persistence) |
-| Mobile layout, no page-wide horizontal scroll, light mode | Done | E (all 15 tabs, 3 viewports), V |
+| Mobile layout, no page-wide horizontal scroll, light mode | Done | E (all 16 tabs, 3 viewports), V |
 | No console errors; no undefined/NaN in UI or SVG | Done | E |
 | Audio starts and stops cleanly; timers cleared on view change | Done | E |
 | Safari (iOS/macOS) and Firefox | Not automatically tested | Browsers unavailable in the build environment; standard APIs only, with iPhone-specific fallbacks |
+
+## Learning companion additions
+
+| Requirement | Status | Where | Tested |
+|---|---|---|---|
+| Tips & Tricks tab, 9 sections in learning order | Done | Tips & Tricks | E (opens, every section expands, links jump to sections), V |
+| Interval groups 0–5–7–12 / 2–4–9–11 / 1–3–8–10 / tritone | Done | Tips & Tricks §1; Practice → Interval memorization groups | U (semitone counts), E |
+| Ascending vs descending | Done | Tips & Tricks §3; Intervals calculator; Practice → Ascending and descending | U (C4→E4 M3 +4 … G4→C4 P5 −7, all roots), E |
+| Interval inversions | Done | Tips & Tricks §4; Practice → Interval inversions; `T.invertInterval` | U (numbers add to 9, qualities swap, semitones add to 12) |
+| Major / natural minor construction | Done | Tips & Tricks §5; Practice → Build a scale | U (minor = major with ♭3 ♭6 ♭7, all roots) |
+| Triads and triad inversions | Done | Tips & Tricks §6; Practice → Triad qualities | U (0-4-7, 0-3-7, 0-3-6, 0-4-8) |
+| Major and natural minor chord families | Done | Tips & Tricks §7; Practice → Chord families | U (qualities in every major key and 11 minor keys) |
+| Fretboard shortcuts, octave shapes, G–B exception | Done | Tips & Tricks §8; Practice → Intervals on the fretboard | U (octave offsets 2,2,3,3; string gaps) |
+| What / Why / Where / How / Tip on every tab and main section | Done | All tabs | E (every tab has an intro; panels expand; no undefined/NaN with roots A, E♭, F♯) |
+| Practice hints | Done | Practice → Show hint | E |
+| Existing settings and practice progress kept | Done | — | E (pre-seeded settings and stats survive reload and new drills) |
+

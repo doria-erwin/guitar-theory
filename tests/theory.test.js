@@ -202,3 +202,52 @@ test('Arpeggio positions contain only chord tones and every tone', () => {
     for (const p of ps) { assert.ok(p.notes.every(n => pcs.includes(T.mod(n.midi)) && n.f >= 0 && n.f <= 24 && n.degree)); assert.ok(pcs.every(x => p.notes.some(n => T.mod(n.midi) === x)), r + c + p.label); }
   }
 });
+
+/* ---------- Learning-layer facts (Tips & Tricks, new Practice drills) ---------- */
+const SIMPLE = ['P1', 'm2', 'M2', 'm3', 'M3', 'P4', 'A4', 'd5', 'P5', 'm6', 'M6', 'm7', 'M7', 'P8'];
+test('Interval groups: semitone counts 0–5–7–12, 2–4–9–11, 1–3–8–10, tritone 6', () => {
+  const s = a => T.INTERVALS.find(x => x.abbr === a).semis;
+  assert.deepEqual(['P1', 'P4', 'P5', 'P8'].map(s), [0, 5, 7, 12]);
+  assert.deepEqual(['M2', 'M3', 'M6', 'M7'].map(s), [2, 4, 9, 11]);
+  assert.deepEqual(['m2', 'm3', 'm6', 'm7'].map(s), [1, 3, 8, 10]);
+  assert.deepEqual(['A4', 'd5'].map(s), [6, 6]);
+  for (const [M, m] of [['M2', 'm2'], ['M3', 'm3'], ['M6', 'm6'], ['M7', 'm7']]) assert.equal(s(M) - s(m), 1);
+});
+test('Interval inversions: numbers add to 9, qualities swap, semitones add to 12', () => {
+  const swap = { M: 'm', m: 'M', P: 'P', A: 'd', d: 'A' };
+  for (const a of SIMPLE.concat(['A2', 'A5', 'd7'])) {
+    const i = T.INTERVALS.find(x => x.abbr === a), v = T.invertInterval(a);
+    assert.equal(i.semis + v.semis, 12, a);
+    const n = +a.slice(1), q = a[0];
+    assert.equal(v.abbr, swap[q] + (9 - n), a);
+  }
+  assert.equal(T.invertInterval('M3').abbr, 'm6'); assert.equal(T.invertInterval('d5').abbr, 'A4'); assert.equal(T.invertInterval('P4').abbr, 'P5');
+});
+test('Direction is separate from quality; inversion moves one note an octave', () => {
+  const iv = (a, o1, b, o2) => { const r = T.intervalBetween(a, o1, b, o2); return r.abbr + (r.descending ? ' down ' : ' up ') + r.semis; };
+  assert.equal(iv('C', 4, 'E', 4), 'M3 up 4'); assert.equal(iv('C', 4, 'G', 4), 'P5 up 7');
+  assert.equal(iv('E', 4, 'C', 4), 'M3 down 4'); assert.equal(iv('C', 4, 'A', 3), 'm3 down 3'); assert.equal(iv('G', 4, 'C', 4), 'P5 down 7');
+  assert.equal(iv('E', 4, 'C', 5), 'm6 up 8');
+  assert.equal(iv('C', 4, 'F♯', 4), 'A4 up 6'); assert.equal(iv('C', 4, 'G♭', 4), 'd5 up 6');
+  for (const r of T.ROOTS) for (const a of SIMPLE) { const i = T.INTERVALS.find(x => x.abbr === a); const top = T.degreeNote(r, i.degree); const o = a === 'P8' ? 5 : 4 + (top.l < T.parseNote(r).l ? 1 : 0); assert.equal(T.intervalBetween(top, o, r, 4).abbr, a, r + a); }
+});
+test('Natural minor = major with 3, 6, 7 lowered; triad semitones', () => {
+  for (const r of T.ROOTS) {
+    const M = T.scaleNotes(r, 'major'), m = T.scaleNotes(r, 'minor');
+    [0, 1, 3, 4].forEach(i => assert.equal(m[i].name, M[i].name));
+    [2, 5, 6].forEach(i => { assert.equal(m[i].l, M[i].l); assert.equal(T.mod(M[i].pc - m[i].pc), 1); });
+  }
+  const semis = id => T.getChord(id).degrees.map(T.degreeSemis).join('-');
+  assert.equal(semis('maj'), '0-4-7'); assert.equal(semis('min'), '0-3-7'); assert.equal(semis('dim'), '0-3-6'); assert.equal(semis('aug'), '0-4-8');
+});
+test('Chord families: major I ii iii IV V vi vii°, natural minor i ii° III iv v VI VII', () => {
+  const q = (k, s) => T.diatonicChords(k, s).map(d => d.triad.quality[0] + d.triad.quality[1]).join(' ');
+  for (const k of T.MAJOR_KEYS) assert.equal(q(k, 'major'), 'Ma Mi Mi Ma Ma Mi Di', k);
+  for (const k of ['A', 'E', 'B', 'F♯', 'C♯', 'D', 'G', 'C', 'F', 'B♭', 'E♭']) assert.equal(q(k, 'minor'), 'Mi Di Ma Mi Mi Ma Ma', k);
+  assert.equal(T.diatonicChords('C')[4].triad.symbol, 'G');
+});
+test('Octave shapes in standard tuning: +2 frets two strings up, +3 when crossing G–B', () => {
+  const m = STD.midi;
+  assert.deepEqual([[0, 2], [1, 3], [2, 4], [3, 5]].map(([a, b]) => 12 - (m[b] - m[a])), [2, 2, 3, 3]);
+  assert.equal(m[4] - m[3], 4); [[0, 1], [1, 2], [2, 3], [4, 5]].forEach(([a, b]) => assert.equal(m[b] - m[a], 5));
+});
