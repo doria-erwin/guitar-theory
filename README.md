@@ -29,10 +29,11 @@ Settings and practice scores are saved in the browser (localStorage). If storage
 | Rhythm | Note values and rests, 8 time signatures with correct grouping (6/8 in two, 7/8 as 2+2+3), metronome with accents and subdivisions, tap tempo, playable examples, counting quiz |
 | Techniques | 11 techniques with notation, tab and synthesized demos (labelled as approximations) |
 | Harmony | 9/11/13, alterations, secondary dominants, modal interchange, tritone substitution, spelling rules |
-| Practice | 10 exercise types × 3 levels, instant feedback, scores, review of missed questions, reset |
+| Tips & Tricks | Learning reference in order: interval groups (0–5–7–12, 2–4–9–11, 1–3–8–10, tritone), full interval reference, ascending vs descending, interval inversions, major/minor scale patterns, triads, chord families, fretboard shortcuts (octave and interval shapes, power chords), 20 quick tips; each section links to its tool and Practice drill |
+| Practice | 17 exercise types × 3 levels (interval groups, direction, inversions, scale building, triads, chord families and fretboard intervals added), hints, instant feedback, scores, review of missed questions, reset |
 | Basics | Strings and tuning, every note frets 0–12, sharps/flats/enharmonics, tips, and a map from every cheat-sheet section to its tab |
 
-Every tab except Practice opens with a short quiz built from that tab's current selections. Example: on Intervals, pick a root and it asks where a random number of semitones up lands. Each quiz has its own question types, a score and a streak, and a Hide button.
+Every tab opens with a short “About this tab” explanation (what it is, why it matters, where it’s used, how it works, a tip), and the main sections inside each tab have their own “What is this?” panel. Every tab except Tips & Tricks and Practice also opens with a short quiz built from that tab's current selections. Example: on Intervals, pick a root and it asks where a random number of semitones up lands. Each quiz has its own question types, a score and a streak, and a Hide button.
 
 ## Source layout
 
@@ -44,6 +45,7 @@ src/app.js               state, persistence, helpers, delegated events, boot and
 src/views.js, views2.js  one render function per tab
 src/practice.js          practice generators and scoring
 src/quiz.js              per-tab quiz card (questions built from each tab's current root/scale/chord)
+src/learn.js             explanations for every tab and section, and the Tips & Tricks tab
 src/styles.css           dark and light themes
 src/index.template.html  page shell and no-JavaScript fallback
 build.js                 inlines everything into dist/index.html
@@ -57,7 +59,7 @@ Scales, chords, progressions and tunings are data tables in `theory.js`. Positio
 
 ```
 node build.js                      # writes dist/index.html
-node --test tests/theory.test.js   # 26 engine tests
+node --test tests/theory.test.js   # 32 engine tests
 python3 tests/e2e.py               # browser tests (pip install playwright; playwright install chromium)
 ```
 

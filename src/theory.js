@@ -95,6 +95,14 @@
     return { number, semis, quality: q, abbr: qa + number, name, simple, compound: number > 8 };
   }
 
+  /* Invert a simple interval within the octave: numbers add to 9, qualities swap (M↔m, A↔d, P stays), semitones add to 12. */
+  function invertInterval(iv) {
+    const i = typeof iv === 'string' ? INTERVALS.find(x => x.abbr === iv) : iv;
+    if (!i || i.semis > 12) return null;
+    const r = qualify(9 - parseDegree(i.degree).n, 12 - i.semis);
+    return INTERVALS.find(x => x.abbr === r.abbr) || Object.assign({ degree: null }, r);
+  }
+
   const INTERVALS = [
     ['Unison', 'P1', '1', 0], ['Minor 2nd', 'm2', '♭2', 1], ['Major 2nd', 'M2', '2', 2], ['Augmented 2nd', 'A2', '♯2', 3], ['Minor 3rd', 'm3', '♭3', 3],
     ['Major 3rd', 'M3', '3', 4], ['Perfect 4th', 'P4', '4', 5], ['Augmented 4th (tritone)', 'A4', '♯4', 6], ['Diminished 5th (tritone)', 'd5', '♭5', 6],
@@ -591,7 +599,7 @@
 
   return {
     LETTERS, NAT, MAJOR_STEPS, ROOTS, SCALES, CHORDS, INTERVALS, TUNINGS, PROGRESSIONS, MAJOR_KEYS, CIRCLE, MODE_NAMES, MODE_FEEL, OPEN, MOVABLE, MAX_FRET, STRING_SETS, CAGED_MAJOR,
-    mod, parseNote, makeNote, spellWithLetter, pcName, parseDegree, degreeSemis, degreeNote, transpose, majorScale, intervalBetween, qualify, midiOf,
+    mod, parseNote, makeNote, spellWithLetter, pcName, parseDegree, degreeSemis, degreeNote, transpose, majorScale, intervalBetween, qualify, invertInterval, midiOf,
     getScale, scaleNotes, stepPattern, modeParent, getChord, chordNotes, chordSymbol, chordPcs, identifyChord, keySignature, relativeMinor, relativeMajor,
     prefersFlats, diatonicChords, progressionChords, customTuning, scalePositions, arpeggioPositions, fretboardNotes, chordVoicings, physicallyValid, detectBarre,
     inversionOrder, inversionVoicings, secondaryDominants, tritoneSub, borrowedChords, walkWindow, walkPerString

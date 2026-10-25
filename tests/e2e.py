@@ -2,7 +2,7 @@
 import sys, os, json
 from playwright.sync_api import sync_playwright
 URL = "file://" + os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dist", "index.html"))
-VIEWS = ['fretboard','scales','intervals','builder','finder','shapes','inversions','arpeggios','keys','progressions','rhythm','techniques','harmony','practice','basics']
+VIEWS = ['fretboard','scales','intervals','builder','finder','shapes','inversions','arpeggios','keys','progressions','rhythm','techniques','harmony','tips','practice','basics']
 fails = []
 def check(cond, msg):
     print(("  ok   " if cond else "  FAIL ") + msg)
@@ -22,7 +22,7 @@ def run(browser_type, name, viewport, mobile, shots):
     pg.goto(URL); pg.wait_for_timeout(300)
     print(f"[{name} {viewport['width']}x{viewport['height']}]")
     check(pg.locator('#boot').count() == 0, "boot fallback removed once JS runs")
-    check(pg.locator('#nav .tab').count() == 15, "15 navigation tabs render")
+    check(pg.locator('#nav .tab').count() == 16, "16 navigation tabs render")
     check(pg.eval_on_selector('[data-set=root]', 'e => e.value') != '', "root selector has a value")
     for v in VIEWS:
         nav(pg, v); pg.wait_for_timeout(120)

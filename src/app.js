@@ -23,7 +23,7 @@ const DEFAULTS = {
   practice: { ex: 'note', level: 'beginner' }, quizOpen: true, quizMode: {}
 };
 const VALID = {
-  view: ['fretboard', 'intervals', 'scales', 'builder', 'finder', 'shapes', 'inversions', 'arpeggios', 'keys', 'progressions', 'rhythm', 'techniques', 'harmony', 'practice', 'basics'],
+  view: ['fretboard', 'intervals', 'scales', 'builder', 'finder', 'shapes', 'inversions', 'arpeggios', 'keys', 'progressions', 'rhythm', 'techniques', 'harmony', 'tips', 'practice', 'basics'],
   labels: ['degree', 'note', 'finger', 'none'], theme: ['dark', 'light']
 };
 /* Load persisted settings, replacing anything invalid with defaults so the UI never shows undefined/NaN. */
@@ -118,7 +118,7 @@ function status(msg) { const el = document.getElementById('status'); if (el) el.
 const NAV = [
   ['fretboard', 'Fretboard'], ['intervals', 'Intervals'], ['scales', 'Scales'], ['builder', 'Chord builder'], ['finder', 'Name a chord'],
   ['shapes', 'Chord shapes'], ['inversions', 'Inversions'], ['arpeggios', 'Arpeggios'], ['keys', 'Keys & circle'], ['progressions', 'Progressions'],
-  ['rhythm', 'Rhythm'], ['techniques', 'Techniques'], ['harmony', 'Harmony'], ['practice', 'Practice'], ['basics', 'Basics']
+  ['rhythm', 'Rhythm'], ['techniques', 'Techniques'], ['harmony', 'Harmony'], ['tips', 'Tips & Tricks'], ['practice', 'Practice'], ['basics', 'Basics']
 ];
 const Views = {};
 let cleanup = [];

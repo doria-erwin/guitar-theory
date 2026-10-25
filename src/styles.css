@@ -242,6 +242,33 @@ pre.tab { font: 13px/1.35 ui-monospace, "SF Mono", Menlo, Consolas, monospace; b
 .feedback.ok, p.ok { color: var(--ok); } .feedback.bad, p.bad { color: var(--bad); }
 .feedback { background: var(--panel2); }
 .score { color: var(--muted); font-size: 14px; }
+/* Learning layer */
+.learn { border: 1px solid var(--line); border-left: 3px solid var(--tone); border-radius: var(--r-sm); background: var(--panel2); margin: 8px 0 12px; font-size: 15px; }
+.learn > summary { cursor: pointer; padding: 8px 12px; list-style: none; line-height: 1.45; }
+.learn > summary::-webkit-details-marker { display: none; }
+.learn > summary::after { content: " Learn more ▾"; color: var(--tone); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.learn[open] > summary::after { content: " Less ▴"; }
+.learn-tag { display: inline-block; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--tone); margin-right: 4px; }
+.learn.is-tab { border-left-color: var(--accent); } .learn.is-tab .learn-tag, .learn.is-tab > summary::after { color: var(--accent); }
+.learn-body { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; padding: 0 12px 10px; }
+.learn-body dt { color: var(--muted); font-size: 13px; font-weight: 650; padding-top: 2px; } .learn-body dd { margin: 0; }
+@media (max-width: 560px) { .learn-body { grid-template-columns: 1fr; } .learn-body dd { margin-bottom: 6px; } }
+.learn-see { padding: 0 12px 10px; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tab-intro { margin-top: 4px; }
+.hint { background: var(--panel2); border-left: 3px solid var(--accent); padding: 8px 12px; border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.tipsec { scroll-margin-top: 72px; } .tipsec > summary { font-weight: 650; font-size: 17px; }
+.chips.order .chip b { color: var(--accent); margin-right: 2px; } .chips.order .chip:hover b { color: inherit; }
+.seq { font-variant-numeric: tabular-nums; color: var(--accent); }
+.trick { background: var(--panel2); border-radius: var(--r-sm); padding: 8px 12px; }
+.cmp, .fams { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.cmp span, .fam { display: flex; flex-direction: column; align-items: center; min-width: 58px; padding: 6px 8px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel2); }
+.cmp small, .fam small { color: var(--muted); font-size: 12px; } .cmp em, .fam em { color: var(--muted); font-style: normal; font-size: 12px; }
+.cmp span.is-alt { border-color: var(--accent); } .cmp span.is-alt small, .cmp span.is-alt b { color: var(--accent); }
+.fam small { color: var(--accent); font-weight: 700; font-size: 13px; }
+.boxes.octs { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); } .octs .octfig { padding: 6px; overflow-x: auto; }
+.tipcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; padding-left: 0; list-style: none; counter-reset: tip; }
+.tipcards li { counter-increment: tip; background: var(--panel2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; }
+.tipcards li::before { content: counter(tip); display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 8px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 12px; font-weight: 700; }
 .tq { border-color: var(--accent); }
 .tq-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .tq-head h2 { margin: 0; flex: 1 1 auto; }
