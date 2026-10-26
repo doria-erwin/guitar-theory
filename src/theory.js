@@ -79,7 +79,7 @@
     let li = (b.l + 7 * o2) - (a.l + 7 * o1);
     let semis = midiOf(b, o2) - midiOf(a, o1);
     let descending = false;
-    if (li < 0 || (li === 0 && semis < 0)) { li = -li; semis = -semis; descending = true; }
+    if (li < 0 || (li === 0 && semis < 0)) { li = -li; semis = -semis || 0; descending = true; } // || 0: no −0 for d2 down
     return Object.assign(qualify(li + 1, semis), { descending });
   }
   function qualify(number, semis) {
@@ -113,6 +113,16 @@
     if (Math.abs(a) > 2) return null;
     const note = makeNote(l, a); const q = qualify(number, semis);
     return { note, semis, abbr: q.abbr, name: q.name, quality, number };
+  }
+
+  /* The note an interval above root, in the right octave. Octave numbers change at C, not at the root, so the octave is
+     solved from the semitone distance: A4 + major 3rd = C♯5, not C♯4. Accepts an INTERVALS entry or its abbreviation. */
+  function noteAbove(root, octave, iv) {
+    const r = typeof root === 'string' ? parseNote(root) : root;
+    const i = typeof iv === 'string' ? INTERVALS.find(x => x.abbr === iv) : iv;
+    const note = degreeNote(r, i.degree); const start = midiOf(r, octave);
+    const o = octave + (start + i.semis - midiOf(note, octave)) / 12;
+    return { note, octave: o, midi: start + i.semis, interval: intervalBetween(r, octave, note, o) };
   }
 
   /* Invert a simple interval within the octave: numbers add to 9, qualities swap (M↔m, A↔d, P stays), semitones add to 12. */
@@ -619,7 +629,7 @@
 
   return {
     LETTERS, NAT, MAJOR_STEPS, ROOTS, SCALES, CHORDS, INTERVALS, TUNINGS, PROGRESSIONS, MAJOR_KEYS, CIRCLE, MODE_NAMES, MODE_FEEL, OPEN, MOVABLE, MAX_FRET, STRING_SETS, CAGED_MAJOR,
-    mod, parseNote, makeNote, spellWithLetter, pcName, parseDegree, degreeSemis, degreeNote, transpose, majorScale, intervalBetween, qualify, invertInterval, intervalAbove, qualitiesFor, intervalFamily, QUALITY_NAMES, midiOf,
+    mod, parseNote, makeNote, spellWithLetter, pcName, parseDegree, degreeSemis, degreeNote, transpose, majorScale, intervalBetween, qualify, invertInterval, intervalAbove, noteAbove, qualitiesFor, intervalFamily, QUALITY_NAMES, midiOf,
     getScale, scaleNotes, stepPattern, modeParent, getChord, chordNotes, chordSymbol, chordPcs, identifyChord, keySignature, relativeMinor, relativeMajor,
     prefersFlats, diatonicChords, progressionChords, customTuning, scalePositions, arpeggioPositions, fretboardNotes, chordVoicings, physicallyValid, detectBarre,
     inversionOrder, inversionVoicings, secondaryDominants, tritoneSub, borrowedChords, walkWindow, walkPerString

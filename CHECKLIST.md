@@ -75,3 +75,11 @@ Tests: **U** = engine unit test (`tests/theory.test.js`), **E** = browser test (
 | Interval qualities: two families, explorer, fretboard, enharmonic intervals | Done | Intervals → Interval qualities explorer, Why interval qualities exist; `T.intervalAbove`, `T.qualitiesFor` | U (every root × number × quality agrees with the interval calculator; one semitone per step; no d1; C–D♯/C–E♭, C–F♯/C–G♭; D♭→G = A4, C♯→G = d5), E (explorer: result, ladder and fretboard distance for 7 roots × all numbers × qualities) |
 | Interval quality reference tables (perfect, major/minor, every name 0–13) | Done | Intervals → Why interval qualities exist | E |
 | Interval quality drills with per-answer explanations | Done | Practice → Interval qualities | E (every wrong choice has an explanation; 3 levels; old scores kept) |
+
+## Quiz audit
+
+| Check | Status | Tested |
+|---|---|---|
+| Every Practice exercise (all levels and interval groups) and every tab quiz (all modes, all roots, scales, chords, inversions, arpeggios, progressions, two tunings) has its answer among unique choices, exactly one correct choice by an independent answer key, writable spellings (no triple ♯/♭), and explanations that state the answer | Done | `tests/quiz.test.js` (seeded; 8 seeds × ~33,000 questions clean); browser checks |
+| Interval naming uses letters for the number and semitones for the quality, ascending and descending, enharmonic spellings, compounds | Done | U (every quality from 35 spelled roots, up and down; 9th–13th; A → C / C♯ / C𝄪 / C♭ / D / D♯ / E♭) |
+| Saved data compatibility | Done | Review questions saved by the old interval generators are dropped on load; scores and settings are kept (U, E) |

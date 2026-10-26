@@ -1,4 +1,4 @@
-// Run: node --test tests/
+// Run: node --test tests/*.test.js
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const T = require('../src/theory.js');
@@ -280,4 +280,42 @@ test('Interval qualities: examples, enharmonic pairs, and accidentals that do no
   assert.equal(nm('C', 3, 'd'), 'E𝄫'); assert.equal(nm('C♯', 5, 'A'), 'G𝄪'); assert.equal(nm('C', 7, 'd'), 'B𝄫');
   assert.equal(T.intervalAbove('A♯', 3, 'A'), null); // would need a triple sharp
   assert.equal(T.intervalAbove('C', 8, 'A').semis, 13); assert.equal(nm('C', 8, 'd'), 'C♭');
+});
+
+/* ---------- Interval identification audit ---------- */
+test('A → C / C♯ / C𝄪 / C♭ / D / D♯ / E♭: letters give the number, semitones give the quality', () => {
+  const iv = (b, o2 = 5) => { const r = T.intervalBetween('A', 4, b, o2); return `${r.name} ${r.semis} ${r.descending ? 'down' : 'up'}`; };
+  assert.equal(iv('C'), 'Minor 3rd 3 up'); assert.equal(iv('C♯'), 'Major 3rd 4 up'); assert.equal(iv('C𝄪'), 'Augmented 3rd 5 up'); assert.equal(iv('C♭'), 'Diminished 3rd 2 up');
+  assert.equal(iv('D'), 'Perfect 4th 5 up'); assert.equal(iv('D♯'), 'Augmented 4th 6 up'); assert.equal(iv('E♭'), 'Diminished 5th 6 up');
+  // Enharmonic notes give different names: C♯ (M3) and D♭ (d4) are both 4 semitones above A.
+  assert.equal(T.intervalBetween('A', 4, 'D♭', 5).name, 'Diminished 4th'); assert.equal(T.intervalBetween('A', 4, 'D♭', 5).semis, 4);
+});
+test('noteAbove: the upper note is always above the root, for every root and every interval (the A → C♯ bug)', () => {
+  const x = T.noteAbove('A', 4, 'M3'); assert.equal(x.note.name + x.octave, 'C♯5'); assert.equal(x.interval.name, 'Major 3rd');
+  for (const r of T.ROOTS.concat(['C♭', 'B♯', 'E♯', 'F♭'])) for (const i of T.INTERVALS) {
+    const y = T.noteAbove(r, 4, i);
+    assert.ok(Number.isInteger(y.octave), `${r} ${i.abbr} octave`);
+    assert.equal(y.interval.descending, false, `${r} ${i.abbr} goes down`);
+    assert.equal(y.interval.abbr, i.abbr, `${r} + ${i.abbr} → ${y.note.name}${y.octave} = ${y.interval.abbr}`);
+    assert.equal(y.midi - T.midiOf(r, 4), i.semis);
+  }
+});
+test('Every quality from every spelled root (single and double accidentals), up and down', () => {
+  const ROOTS = []; for (let l = 0; l < 7; l++) for (const a of [-2, -1, 0, 1, 2]) ROOTS.push(T.makeNote(l, a));
+  let n = 0;
+  for (const r of ROOTS) for (let num = 1; num <= 8; num++) for (const q of T.qualitiesFor(num)) {
+    const x = T.intervalAbove(r, num, q); if (!x) continue;
+    const o = [4, 5].find(o2 => T.midiOf(x.note, o2) - T.midiOf(r, 4) === x.semis);
+    const up = T.intervalBetween(r, 4, x.note, o), down = T.intervalBetween(x.note, o, r, 4);
+    assert.equal(up.abbr, q + num); assert.equal(up.descending, false);
+    assert.equal(down.abbr, q + num, `${x.note.name}${o} down to ${r.name}4`); assert.equal(down.semis, x.semis);
+    assert.equal(down.descending, x.semis > 0 || num > 1);
+    n++;
+  }
+  assert.ok(n > 750, 'combinations checked: ' + n);
+});
+test('Compound intervals: 9th–13th from every root, letters and semitones agree', () => {
+  for (const r of T.ROOTS) for (const i of T.INTERVALS.filter(x => x.semis > 12)) {
+    const y = T.noteAbove(r, 3, i); assert.equal(y.interval.abbr, i.abbr); assert.equal(y.interval.compound, true); assert.equal(y.interval.number, T.parseDegree(i.degree).n);
+  }
 });

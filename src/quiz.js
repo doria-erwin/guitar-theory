@@ -2,7 +2,15 @@
    Each generator returns { prompt, choices: [{v, l}], right, explain, fb?, box?, play? }; the answer is hidden until the learner picks. */
 const TQ = { q: null, ctx: null, view: null, picked: null };
 const qScores = () => { const d = Store.get('gte.tabquiz', {}); return d && typeof d === 'object' ? d : {}; };
-const twelve = (pref = flatPref()) => range0(0, 11).map(pc => ({ v: String(pc), l: T.pcName(pc, pref) }));
+/* Pitch questions (any spelling is right): twelve buttons, each labelled with both spellings so no label implies a wrong letter. */
+const twelve = (pref = 'both') => range0(0, 11).map(pc => ({ v: String(pc), l: T.pcName(pc, pref) }));
+/* Spelling questions (the letter matters): the right note, its enharmonic twins and same-letter neighbours. Graded by name. */
+function spelled(note, n = 6) {
+  const pool = [T.spellWithLetter(note.l + 1, note.pc), T.spellWithLetter(note.l + 6, note.pc)].filter(x => Math.abs(x.a) <= 2).map(x => x.name)
+    .concat([-1, 1].filter(d => Math.abs(note.a + d) <= 2).map(d => T.makeNote(note.l, note.a + d).name), [T.makeNote((note.l + 1) % 7, 0).name, T.makeNote((note.l + 6) % 7, 0).name]);
+  return asChoices(uniq(pool).filter(x => x !== note.name), n, note.name);
+}
+const spellNote = n => ` The letter is ${esc(T.LETTERS[n.l])}, so it is written ${esc(n.name)}.`;
 const asChoices = (list, n = 4, right) => (n ? choicesFrom(right, list.filter(x => x !== right), n) : list).map(x => ({ v: x, l: x }));
 const uniq = a => [...new Set(a)];
 const pickN = (right, pool, n = 4) => asChoices(uniq(pool), n, right);
@@ -40,7 +48,7 @@ const QUIZ = {
         const nm = (notes.find(n => n.pc === pc) || { name: T.pcName(pc, flatPref()) }).name; const yes = inPcs.includes(pc);
         return { prompt: `Is <b>${esc(nm)}</b> in <b>${name}</b>?`, right: yes ? 'yes' : 'no', choices: [{ v: 'yes', l: 'Yes, it is in the scale' }, { v: 'no', l: 'No, it is outside' }], explain };
       }
-      return { prompt: `In <b>${name}</b>, what note is degree <b>${esc(sc.degrees[i])}</b>?`, right: String(notes[i].pc), choices: twelve(), explain };
+      return { prompt: `In <b>${name}</b>, what note is degree <b>${esc(sc.degrees[i])}</b>?`, right: notes[i].name, choices: spelled(notes[i]), explain: explain + spellNote(notes[i]) };
     }
   },
   intervals: {
@@ -50,8 +58,8 @@ const QUIZ = {
       const r = rootNote(); const iv = rnd(T.INTERVALS.filter(x => x.semis > 0 && x.semis <= 12 && (mode !== 'semis' || !['A2', 'A5', 'd7', 'A4'].includes(x.abbr))));
       const top = T.degreeNote(r, iv.degree), base = nearMidi(r.pc, 48), play = [base, base + iv.semis];
       const explain = `${iv.semis} semitone${iv.semis === 1 ? '' : 's'} = ${esc(iv.name)} (${esc(iv.abbr)}): <b>${esc(S.root)} → ${esc(top.name)}</b>.`;
-      if (mode === 'name') return { prompt: `What note is a <b>${esc(iv.name.replace(/ \(.*\)/, ''))}</b> above <b>${esc(S.root)}</b>?`, play, right: String(top.pc), choices: twelve(), explain };
-      if (mode === 'count') return { prompt: `How many semitones from <b>${esc(S.root)}</b> up to <b>${esc(top.name)}</b>?`, play, right: String(iv.semis), choices: range0(1, 12).map(n => ({ v: String(n), l: String(n) })), explain };
+      if (mode === 'name') return { prompt: `What note is ${/^[AEIOU]/.test(iv.name) ? 'an' : 'a'} <b>${esc(iv.name.replace(/ \(.*\)/, ''))}</b> above <b>${esc(S.root)}</b>?`, play, right: top.name, choices: spelled(top), explain: explain + spellNote(top) };
+      if (mode === 'count') return { prompt: `How many semitones from <b>${esc(S.root)}</b> up to <b>${esc(top.name)}</b>${iv.semis === 12 ? ' (one octave higher)' : ''}?`, play, right: String(iv.semis), choices: range0(1, 12).map(n => ({ v: String(n), l: String(n) })), explain };
       return { prompt: `Start on <b>${esc(S.root)}</b> and go up <b>${iv.semis} semitone${iv.semis === 1 ? '' : 's'}</b>. Which note do you land on?`, play, right: String(top.pc), choices: twelve(), explain };
     }
   },
@@ -61,12 +69,12 @@ const QUIZ = {
     make(mode) {
       const r = rootNote(), c = T.getChord(S.chord), notes = T.chordNotes(r, c), sym = T.chordSymbol(r, c); const k = 1 + Math.floor(Math.random() * (notes.length - 1)); const d = c.degrees[k];
       const explain = `${esc(sym)} = ${esc(noteNames(notes))} (${esc(c.degrees.join(' '))}).`;
-      if (mode === 'semis') return { prompt: `How many semitones above the root is the <b>${esc(d)}</b>?`, right: String(T.degreeSemis(d)), choices: uniq(c.degrees.slice(1).map(T.degreeSemis).concat(range0(1, 11))).slice(0, 8).sort((a, b) => a - b).map(n => ({ v: String(n), l: String(n) })), explain: `${esc(d)} = ${T.degreeSemis(d)} semitones. ${explain}` };
+      if (mode === 'semis') return { prompt: `How many semitones above the root is the <b>${esc(d)}</b>?`, right: String(T.degreeSemis(d)), choices: uniq(c.degrees.slice(1).map(T.degreeSemis).concat(range0(1, 11))).filter(n => !(T.degreeSemis(d) > 12 && n === T.degreeSemis(d) - 12)).slice(0, 8).sort((a, b) => a - b).map(n => ({ v: String(n), l: String(n) })), explain: `${esc(d)} = ${T.degreeSemis(d)} semitones${T.degreeSemis(d) > 12 ? ` (an octave + ${T.degreeSemis(d) - 12}: extensions are counted above the octave)` : ''}. ${explain}` };
       if (mode === 'spell') {
-        const right = noteNames(notes); const wrong = T.CHORDS.filter(x => x.id !== c.id && x.degrees.length === c.degrees.length).map(x => noteNames(T.chordNotes(r, x)));
+        const right = noteNames(notes); const sameSize = T.CHORDS.filter(x => x.id !== c.id && x.degrees.length === c.degrees.length); const wrong = (sameSize.length >= 3 ? sameSize : T.CHORDS.filter(x => x.id !== c.id && Math.abs(x.degrees.length - c.degrees.length) <= 1)).map(x => noteNames(T.chordNotes(r, x)));
         return { prompt: `Spell <b>${esc(sym)}</b> (formula ${esc(c.degrees.join(' '))}).`, right, choices: pickN(right, wrong.filter(w => w !== right)), explain };
       }
-      return { prompt: `What is the <b>${esc(d)}</b> of <b>${esc(sym)}</b>?`, right: String(notes[k].pc), choices: twelve(), explain };
+      return { prompt: `What is the <b>${esc(d)}</b> of <b>${esc(sym)}</b>?`, right: notes[k].name, choices: spelled(notes[k]), explain: explain + spellNote(notes[k]) };
     }
   },
   finder: {
@@ -100,7 +108,7 @@ const QUIZ = {
       const r = rootNote(), c = T.getChord(S.invChord), notes = T.chordNotes(r, c), sym = T.chordSymbol(r, c); const n = Math.min(4, notes.length);
       const names = ['Root position', '1st inversion', '2nd inversion', '3rd inversion'].slice(0, n); const i = Math.floor(Math.random() * n); const order = T.inversionOrder(notes, i);
       const explain = `${esc(names[i])} puts the ${esc(T.inversionOrder(c.degrees, i)[0])} (${esc(order[0].name)}) in the bass: ${esc(sym)}${i ? '/' + esc(order[0].name) : ''}.`;
-      if (mode === 'bass') return { prompt: `What is the bass note of <b>${esc(sym)}</b> in <b>${esc(names[i].toLowerCase())}</b>?`, right: String(order[0].pc), choices: twelve(), explain };
+      if (mode === 'bass') return { prompt: `What is the bass note of <b>${esc(sym)}</b> in <b>${esc(names[i].toLowerCase())}</b>?`, right: order[0].name, choices: spelled(order[0]), explain };
       return { prompt: `<b>${esc(sym)}</b> voiced low to high as <b>${esc(noteNames(order))}</b>. Which inversion is it?`, right: names[i], choices: asChoices(names, 0), explain };
     }
   },
@@ -162,7 +170,7 @@ const QUIZ = {
     make(mode) {
       const r = rootNote();
       if (mode === 'borrow') { const b = T.borrowedChords(r); const x = rnd(b); return { prompt: `In <b>${esc(S.root)} major</b>, which chord is <b>${esc(x.roman)}</b> borrowed from ${esc(S.root)} minor?`, right: x.symbol, choices: pickN(x.symbol, b.map(y => y.symbol).concat(T.diatonicChords(r).map(y => y.triad.symbol))), explain: `${esc(x.roman)} = ${esc(x.symbol)} (${esc(noteNames(x.notes))}).` }; }
-      if (mode === 'tri') { const d = T.parseNote(rnd(ROOTS_BY_LEVEL.intermediate)); const s = T.tritoneSub(d); return { prompt: `What is the tritone substitute for <b>${esc(d.name)}7</b>?`, right: String(s.root.pc), choices: twelve(), explain: `${esc(s.symbol)}: a tritone (6 semitones) from ${esc(d.name)}, sharing the 3rd and ♭7.` }; }
+      if (mode === 'tri') { const d = T.parseNote(rnd(ROOTS_BY_LEVEL.intermediate)); const s = T.tritoneSub(d); return { prompt: `What is the tritone substitute for <b>${esc(d.name)}7</b>? (Its root note.)`, right: s.root.name, choices: spelled(s.root), explain: `${esc(s.symbol)}: a tritone (6 semitones) from ${esc(d.name)}, sharing the 3rd and ♭7.` }; }
       const sd = T.secondaryDominants(r); const x = rnd(sd);
       return { prompt: `In <b>${esc(S.root)} major</b>, what is <b>${esc(x.label)}</b> (the dominant that leads to ${esc(x.target)})?`, right: x.symbol, choices: pickN(x.symbol, sd.map(y => y.symbol).concat(T.diatonicChords(r).map(y => y.root.name + '7'))), explain: `${esc(x.symbol)} is a 5th above ${esc(x.target)}: ${esc(noteNames(x.notes))}.` };
     }
