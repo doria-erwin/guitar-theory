@@ -432,7 +432,7 @@ pre.tab { font: 13px/1.35 ui-monospace, "SF Mono", Menlo, Consolas, monospace; b
     let li = (b.l + 7 * o2) - (a.l + 7 * o1);
     let semis = midiOf(b, o2) - midiOf(a, o1);
     let descending = false;
-    if (li < 0 || (li === 0 && semis < 0)) { li = -li; semis = -semis; descending = true; }
+    if (li < 0 || (li === 0 && semis < 0)) { li = -li; semis = -semis || 0; descending = true; } // || 0: no −0 for d2 down
     return Object.assign(qualify(li + 1, semis), { descending });
   }
   function qualify(number, semis) {
@@ -466,6 +466,16 @@ pre.tab { font: 13px/1.35 ui-monospace, "SF Mono", Menlo, Consolas, monospace; b
     if (Math.abs(a) > 2) return null;
     const note = makeNote(l, a); const q = qualify(number, semis);
     return { note, semis, abbr: q.abbr, name: q.name, quality, number };
+  }
+
+  /* The note an interval above root, in the right octave. Octave numbers change at C, not at the root, so the octave is
+     solved from the semitone distance: A4 + major 3rd = C♯5, not C♯4. Accepts an INTERVALS entry or its abbreviation. */
+  function noteAbove(root, octave, iv) {
+    const r = typeof root === 'string' ? parseNote(root) : root;
+    const i = typeof iv === 'string' ? INTERVALS.find(x => x.abbr === iv) : iv;
+    const note = degreeNote(r, i.degree); const start = midiOf(r, octave);
+    const o = octave + (start + i.semis - midiOf(note, octave)) / 12;
+    return { note, octave: o, midi: start + i.semis, interval: intervalBetween(r, octave, note, o) };
   }
 
   /* Invert a simple interval within the octave: numbers add to 9, qualities swap (M↔m, A↔d, P stays), semitones add to 12. */
@@ -972,7 +982,7 @@ pre.tab { font: 13px/1.35 ui-monospace, "SF Mono", Menlo, Consolas, monospace; b
 
   return {
     LETTERS, NAT, MAJOR_STEPS, ROOTS, SCALES, CHORDS, INTERVALS, TUNINGS, PROGRESSIONS, MAJOR_KEYS, CIRCLE, MODE_NAMES, MODE_FEEL, OPEN, MOVABLE, MAX_FRET, STRING_SETS, CAGED_MAJOR,
-    mod, parseNote, makeNote, spellWithLetter, pcName, parseDegree, degreeSemis, degreeNote, transpose, majorScale, intervalBetween, qualify, invertInterval, intervalAbove, qualitiesFor, intervalFamily, QUALITY_NAMES, midiOf,
+    mod, parseNote, makeNote, spellWithLetter, pcName, parseDegree, degreeSemis, degreeNote, transpose, majorScale, intervalBetween, qualify, invertInterval, intervalAbove, noteAbove, qualitiesFor, intervalFamily, QUALITY_NAMES, midiOf,
     getScale, scaleNotes, stepPattern, modeParent, getChord, chordNotes, chordSymbol, chordPcs, identifyChord, keySignature, relativeMinor, relativeMajor,
     prefersFlats, diatonicChords, progressionChords, customTuning, scalePositions, arpeggioPositions, fretboardNotes, chordVoicings, physicallyValid, detectBarre,
     inversionOrder, inversionVoicings, secondaryDominants, tritoneSub, borrowedChords, walkWindow, walkPerString
@@ -2062,15 +2072,30 @@ const ivLabel = s => s === 6 ? 'A4 / d5' : T.INTERVALS.find(x => x.semis === s &
 const SEMI_LABELS = range0(0, 12).map(ivLabel);
 const signedSemis = n => (n < 0 ? '−' : '+') + Math.abs(n);
 /* Upper note and its octave for an ascending interval from root in octave 4. */
-function ivTop(root, iv) { const top = T.degreeNote(root, iv.degree); const o = [4, 5].find(o2 => { const r = T.intervalBetween(root, 4, top, o2); return r.abbr === iv.abbr && !r.descending; }); return { top, o }; }
+function ivTop(root, iv) { const x = T.noteAbove(root, 4, iv); return { top: x.note, o: x.octave }; }
+/* Same-letter intervals are ambiguous without it: “D up to D” could be a unison or an octave. */
+const octaveHint = number => number >= 8 ? ' (one octave or more higher)' : '';
 const LEVELS = ['beginner', 'intermediate', 'advanced'];
 const rnd = a => a[Math.floor(Math.random() * a.length)];
 const shuffle = a => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
 const ROOTS_BY_LEVEL = { beginner: ['C', 'G', 'D', 'A', 'E', 'F'], intermediate: ['C', 'G', 'D', 'A', 'E', 'B', 'F', 'B♭', 'E♭', 'A♭'], advanced: T.MAJOR_KEYS.slice() };
+/* A random root from the level's list for which every note the question shows can be written with at most a double ♯ or ♭
+   (C♭ dim7 would need B♭♭♭). notesOf(root) returns every note used in the prompt, answer and choices. */
+const writable = notes => notes.every(n => Math.abs(n.a) <= 2);
+function rootFor(level, notesOf) { const ok = shuffle(ROOTS_BY_LEVEL[level]).find(r => writable(notesOf(T.parseNote(r)))); return T.parseNote(ok || 'C'); }
 function choicesFrom(right, pool, n = 4) { const set = [right]; for (const p of shuffle(pool)) { if (set.length >= n) break; if (!set.includes(p)) set.push(p); } return shuffle(set); }
 
 let P = { q: null, picked: null, sel: [], result: null };
-function progress() { const d = Store.get('gte.practice', null); return d && typeof d === 'object' && d.stats ? d : { stats: {}, missed: [] }; }
+/* Question version. Review questions saved by older generators in STALE_EX could carry wrong answers (the interval octave bug,
+   ambiguous same-letter intervals, enharmonic relative keys), so they are dropped on load. Scores are never touched. */
+const QV = 2, STALE_EX = ['interval', 'ivgroups', 'quality', 'relative'];
+function progress() {
+  const d = Store.get('gte.practice', null); if (!(d && typeof d === 'object' && d.stats)) return { stats: {}, missed: [] };
+  if (!Array.isArray(d.missed)) d.missed = [];
+  const kept = d.missed.filter(m => m && m.q && !(STALE_EX.includes(m.ex) && !(m.q.v >= QV)));
+  if (kept.length !== d.missed.length) { d.missed = kept; saveProgress(d); }
+  return d;
+}
 function saveProgress(p) { Store.set('gte.practice', p); }
 /* Stats key; interval groups score each group separately. Existing keys (ex:level) are unchanged. */
 const statKey = () => S.practice.ex + (S.practice.ex === 'ivgroups' ? '-' + S.practice.group : '') + ':' + S.practice.level;
@@ -2089,11 +2114,10 @@ const GEN = {
   },
   interval(level) {
     const pool = level === 'beginner' ? T.INTERVALS.filter(x => ['m2', 'M2', 'm3', 'M3', 'P4', 'P5', 'M6', 'P8'].includes(x.abbr)) : level === 'intermediate' ? T.INTERVALS.filter(x => x.semis <= 12 && !['A2', 'A5', 'd7'].includes(x.abbr)) : T.INTERVALS;
-    const iv = rnd(pool); const root = T.parseNote(rnd(ROOTS_BY_LEVEL[level]));
-    const top = T.degreeNote(root, iv.degree); const oct = 4 + Math.floor((T.parseDegree(iv.degree).n - 1) / 7);
-    const res = T.intervalBetween(root, 4, top, oct);
+    const iv = rnd(pool); const root = rootFor(level, r => [T.degreeNote(r, iv.degree)]);
+    const { note: top, interval: res } = T.noteAbove(root, 4, iv);
     const midiA = T.midiOf(root, 3), midiB = midiA + res.semis;
-    return { kind: 'choice', prompt: `What interval is <b>${esc(root.name)}</b> up to <b>${esc(top.name)}</b>${res.compound ? ' (an octave or more above)' : ''}?`, audio: [midiA, midiB], right: res.name, choices: choicesFrom(res.name, pool.map(x => T.intervalBetween(root, 4, T.degreeNote(root, x.degree), 4 + Math.floor((T.parseDegree(x.degree).n - 1) / 7)).name)), explain: `${res.semis} semitones, ${res.number} letters (${esc(root.name)} to ${esc(top.name)}).`, hint: 'Count letters for the number (C D E = 3rd), then semitones for the quality.', spec: { ex: 'interval' } };
+    return { kind: 'choice', prompt: `What interval is <b>${esc(root.name)}</b> up to <b>${esc(top.name)}</b>${octaveHint(res.number)}?`, audio: [midiA, midiB], right: res.name, choices: choicesFrom(res.name, pool.map(x => T.noteAbove(root, 4, x).interval.name)), explain: `${res.semis} semitones, ${res.number} letters (${esc(root.name)} to ${esc(top.name)}).`, hint: 'Count letters for the number (C D E = 3rd), then semitones for the quality.', spec: { ex: 'interval' } };
   },
   degree(level) {
     const sc = level === 'beginner' ? T.getScale('major') : level === 'intermediate' ? T.getScale(rnd(['major', 'minor'])) : T.getScale(rnd(['major', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'minor', 'locrian', 'harmonic']));
@@ -2102,14 +2126,14 @@ const GEN = {
   },
   tones(level) {
     const ids = level === 'beginner' ? ['maj', 'min'] : level === 'intermediate' ? ['7', 'maj7', 'm7', 'dim', 'aug'] : ['m7b5', 'dim7', '9', '13', '7s9', 'mmaj7', '7b9'];
-    const c = T.getChord(rnd(ids)); const root = T.parseNote(rnd(ROOTS_BY_LEVEL[level])); const notes = T.chordNotes(root, c);
+    const c = T.getChord(rnd(ids)); const root = rootFor(level, r => T.chordNotes(r, c).concat(T.majorScale(r), T.chordNotes(r, 'dim7'), T.chordNotes(r, '7s9'))); const notes = T.chordNotes(root, c);
     const k = 1 + Math.floor(Math.random() * (notes.length - 1)); const deg = c.degrees[k];
     const pool = T.majorScale(root).concat(T.chordNotes(root, 'dim7'), T.chordNotes(root, '7s9')).map(n => n.name);
     return { kind: 'choice', prompt: `What is the <b>${esc(deg)}</b> of <b>${esc(T.chordSymbol(root, c))}</b>?`, right: notes[k].name, choices: choicesFrom(notes[k].name, pool), explain: `${esc(T.chordSymbol(root, c))} = ${esc(noteNames(notes))} (${esc(c.degrees.join(' '))}).`, hint: 'Write the major scale of the root, take that degree, then apply any ♭ or ♯ from the formula.', spec: { ex: 'tones' } };
   },
   chord(level) {
     const ids = level === 'beginner' ? ['maj', 'min', 'dim', 'aug', 'sus4'] : level === 'intermediate' ? ['maj', 'min', '7', 'maj7', 'm7', 'm7b5', 'sus2', '6'] : ['m7b5', 'dim7', 'mmaj7', '9', 'maj9', 'm9', '7s9', '7b9', '13', '7sus4'];
-    const c = T.getChord(rnd(ids)); const root = T.parseNote(rnd(ROOTS_BY_LEVEL[level])); const notes = T.chordNotes(root, c);
+    const c = T.getChord(rnd(ids)); const root = rootFor(level, r => T.chordNotes(r, c)); const notes = T.chordNotes(root, c);
     const right = T.chordSymbol(root, c);
     return { kind: 'choice', prompt: `Which chord is <b>${esc(noteNames(notes))}</b>?`, audio: notes.map((n, i) => T.midiOf(n, 3) + (i && n.pc <= notes[0].pc ? 12 : 0)), chordAudio: true, right, choices: choicesFrom(right, ids.map(id => T.chordSymbol(root, id))), explain: `Root ${esc(root.name)}, formula ${esc(c.degrees.join(' '))}.`, hint: 'The first note is the root. Measure the 3rd (3 or 4 semitones) and the 5th, then any 7th.', spec: { ex: 'chord' } };
   },
@@ -2127,10 +2151,10 @@ const GEN = {
   },
   build(level) {
     const ids = level === 'beginner' ? ['maj', 'min', 'sus2', 'sus4'] : level === 'intermediate' ? ['7', 'maj7', 'm7', 'm7b5', 'dim', 'aug'] : ['dim7', '9', 'm9', '13', '7s9', 'mmaj7', '69'];
-    const c = T.getChord(rnd(ids)); const root = T.parseNote(rnd(ROOTS_BY_LEVEL[level])); const right = noteNames(T.chordNotes(root, c));
+    const c = T.getChord(rnd(ids)); const root = rootFor(level, r => ids.flatMap(id => T.chordNotes(r, id))); const right = noteNames(T.chordNotes(root, c));
     const wrong = ids.filter(id => id !== c.id).map(id => noteNames(T.chordNotes(root, id)));
     wrong.push(T.chordNotes(root, c).map(n => T.pcName(n.pc, n.a < 0 ? 'sharp' : 'flat')).join(' '));
-    return { kind: 'choice', prompt: `Build <b>${esc(T.chordSymbol(root, c))}</b> (formula ${esc(c.degrees.join(' '))}).`, right, choices: choicesFrom(right, wrong), explain: `Major scale of ${esc(root.name)}: ${esc(noteNames(T.majorScale(root)))}. Spell with letters in order.`, hint: 'Write the major scale of the root, pick the formula degrees, then apply ♭ and ♯.', spec: { ex: 'build' } };
+    return { kind: 'choice', prompt: `Build <b>${esc(T.chordSymbol(root, c))}</b> (formula ${esc(c.degrees.join(' '))}).`, right, choices: choicesFrom(right, wrong), explain: `Major scale of ${esc(root.name)}: ${esc(noteNames(T.majorScale(root)))}. Degrees ${esc(c.degrees.join(' '))}, spelled with letters in order: ${esc(right)}.`, hint: 'Write the major scale of the root, pick the formula degrees, then apply ♭ and ♯.', spec: { ex: 'build' } };
   },
   ivgroups(level) {
     const group = IV_SETS[S.practice.group] ? S.practice.group : 'perfect'; const set = IV_SETS[group]; const iv = ivOf(rnd(set));
@@ -2145,7 +2169,7 @@ const GEN = {
       const alt = T.pcName(top.pc, top.a > 0 || top.name.includes('♯') ? 'flat' : 'sharp'); if (alt !== top.name) pool.unshift(alt);
       return { kind: 'choice', prompt: `What note is a <b>${esc(iv.abbr)}</b> above <b>${esc(root.name)}</b>?`, audio, right: top.name, choices: choicesFrom(top.name, uniq(pool)), explain: `${esc(root.name)} + ${iv.semis} semitones, ${T.parseDegree(iv.degree).n === 8 ? 'same letter' : 'counting ' + T.parseDegree(iv.degree).n + ' letters'} = ${esc(top.name)}. ${explain}`, hint, spec };
     }
-    if (type === 'spelled') return { kind: 'choice', prompt: `What interval is <b>${esc(root.name)}</b> up to <b>${esc(top.name)}</b>?`, audio, right: iv.abbr, choices: choicesFrom(iv.abbr, iv.semis === 6 ? ['A4', 'd5', 'P4', 'P5'] : set.concat(IV_SETS.mixed)), explain: `${esc(root.name)}–${esc(top.name)}: ${T.parseDegree(iv.degree).n} letters and ${iv.semis} semitones = ${esc(iv.abbr)}${o > 4 ? ' (the octave above)' : ''}.`, hint, spec };
+    if (type === 'spelled') return { kind: 'choice', prompt: `What interval is <b>${esc(root.name)}</b> up to <b>${esc(top.name)}</b>${octaveHint(T.parseDegree(iv.degree).n)}?`, audio, right: iv.abbr, choices: choicesFrom(iv.abbr, iv.semis === 6 ? ['A4', 'd5', 'P4', 'P5'] : set.concat(IV_SETS.mixed)), explain: `${esc(root.name)}–${esc(top.name)}: ${T.parseDegree(iv.degree).n} letters and ${iv.semis} semitones = ${esc(iv.abbr)}${o > 4 ? ' (the octave above)' : ''}.`, hint, spec };
     const right = ivLabel(iv.semis);
     return { kind: 'choice', prompt: `Which interval is <b>${iv.semis} semitone${iv.semis === 1 ? '' : 's'}</b>?`, right, choices: level === 'beginner' ? choicesFrom(right, uniq(set.map(a => ivLabel(ivOf(a).semis)).concat(SEMI_LABELS))) : SEMI_LABELS.slice(), explain, hint, spec };
   },
@@ -2165,7 +2189,7 @@ const GEN = {
     const type = level === 'beginner' ? 'name' : rnd(level === 'advanced' ? ['name', 'semis', 'notes'] : ['name', 'semis']);
     if (type === 'semis') return { kind: 'choice', prompt: `<b>${esc(iv.abbr)}</b> is ${iv.semis} semitones. How many semitones is its inversion?`, right: String(inv.semis), choices: range0(0, 12).map(String), explain, hint, spec: { ex: 'ivinvert' } };
     if (type === 'notes') {
-      const root = T.parseNote(rnd(ROOTS_BY_LEVEL[level])); const { top, o } = ivTop(root, iv); const res = T.intervalBetween(top, o, root, 5);
+      const root = rootFor(level, r => [T.degreeNote(r, iv.degree)]); const { top, o } = ivTop(root, iv); const res = T.intervalBetween(top, o, root, 5);
       return { kind: 'choice', prompt: `<b>${esc(root.name)}4 → ${esc(top.name)}${o}</b> is ${esc(iv.abbr)}. Move ${esc(root.name)} up an octave. What is <b>${esc(top.name)}${o} → ${esc(root.name)}5</b>?`, audio: [T.midiOf(top, o), T.midiOf(root, 5)], right: res.abbr, choices: choicesFrom(res.abbr, pool.map(a => T.invertInterval(a).abbr).concat([iv.abbr])), explain, hint, spec: { ex: 'ivinvert' } };
     }
     return { kind: 'choice', prompt: `What is the inversion of <b>${esc(iv.abbr)}</b> (${esc(iv.name.replace(/ \(tritone\)/, ''))})?`, right: inv.abbr, choices: choicesFrom(inv.abbr, pool.map(a => T.invertInterval(a).abbr).concat([iv.abbr])), explain, hint, spec: { ex: 'ivinvert' } };
@@ -2194,7 +2218,7 @@ const GEN = {
     const keyName = `${esc(key.name)} ${minor ? 'minor' : 'major'}`; const all = dia.map((x, j) => `${romanFor(j, x.triad.quality)} ${x.triad.symbol}`).join(' · ');
     const hint = minor ? 'Natural minor: i ii° III iv v VI VII.' : 'Major key: I ii iii IV V vi vii° (1, 4, 5 major · 2, 3, 6 minor · 7 diminished).';
     const type = level === 'beginner' ? rnd(['chord', 'roman']) : rnd(['chord', 'roman', 'quality']);
-    if (type === 'quality') { const right = d.triad.quality; return { kind: 'choice', prompt: `In any ${minor ? 'natural minor' : 'major'} key, what quality is the chord on degree <b>${i + 1}</b>?`, right, choices: ['Major', 'Minor', 'Diminished'], explain: `Degree ${i + 1} = ${esc(rn)}. ${esc(hint)}`, hint, spec: { ex: 'family' } }; }
+    if (type === 'quality') { const right = d.triad.quality; return { kind: 'choice', prompt: `In any ${minor ? 'natural minor' : 'major'} key, what quality is the chord on degree <b>${i + 1}</b>?`, right, choices: ['Major', 'Minor', 'Diminished'], explain: `Degree ${i + 1} = ${esc(rn)}, a ${esc(right.toLowerCase())} chord (${esc(right)}). ${esc(hint)}`, hint, spec: { ex: 'family' } }; }
     if (type === 'roman') return { kind: 'choice', prompt: `In <b>${keyName}</b>, which numeral is <b>${esc(d.triad.symbol)}</b>?`, right: rn, choices: dia.map((x, j) => romanFor(j, x.triad.quality)), explain: `${keyName}: ${esc(all)}.`, hint, spec: { ex: 'family' } };
     return { kind: 'choice', prompt: `In <b>${keyName}</b>, what is the <b>${esc(rn)}</b> chord?`, right: d.triad.symbol, choices: choicesFrom(d.triad.symbol, dia.map(x => x.triad.symbol).concat([T.chordSymbol(d.root, d.triad.quality === 'Major' ? 'min' : 'maj')])), explain: `${keyName}: ${esc(all)}.`, hint, spec: { ex: 'family' } };
   },
@@ -2214,9 +2238,10 @@ const GEN = {
   },
   relative(level) {
     const toMinor = Math.random() < 0.5; const k = rnd(ROOTS_BY_LEVEL[level]);
-    if (toMinor) { const right = T.relativeMinor(k).name + ' minor'; return { kind: 'choice', prompt: `What is the relative minor of <b>${esc(k)} major</b>?`, right, choices: choicesFrom(right, T.MAJOR_KEYS.map(x => T.relativeMinor(x).name + ' minor').concat([k + ' minor'])), explain: 'Relative minor = 6th degree of the major scale (same key signature).', spec: { ex: 'relative' } }; }
+    const notTwin = (right, suffix) => x => x === right || T.parseNote(x.replace(suffix, '')).pc !== T.parseNote(right.replace(suffix, '')).pc;
+    if (toMinor) { const right = T.relativeMinor(k).name + ' minor'; return { kind: 'choice', prompt: `What is the relative minor of <b>${esc(k)} major</b>?`, right, choices: choicesFrom(right, T.MAJOR_KEYS.map(x => T.relativeMinor(x).name + ' minor').concat([k + ' minor']).filter(notTwin(right, ' minor'))), explain: 'Relative minor = 6th degree of the major scale (same key signature).', spec: { ex: 'relative' } }; }
     const m = T.relativeMinor(k); const right = k + ' major';
-    return { kind: 'choice', prompt: `What is the relative major of <b>${esc(m.name)} minor</b>?`, right, choices: choicesFrom(right, T.MAJOR_KEYS.map(x => x + ' major').concat([m.name + ' major'])), explain: 'Relative major = ♭3 of the minor key (3 frets up).', spec: { ex: 'relative' } };
+    return { kind: 'choice', prompt: `What is the relative major of <b>${esc(m.name)} minor</b>?`, right, choices: choicesFrom(right, T.MAJOR_KEYS.map(x => x + ' major').concat([m.name + ' major']).filter(notTwin(right, ' major'))), explain: 'Relative major = ♭3 of the minor key (3 frets up).', spec: { ex: 'relative' } };
   }
 };
 function newQuestion() {
@@ -2224,7 +2249,7 @@ function newQuestion() {
   const missed = pr.missed.filter(m => m.ex === ex && m.level === level && (ex !== 'ivgroups' || (m.q.spec && m.q.spec.group) === S.practice.group));
   let q;
   if (missed.length && Math.random() < 0.4) { const m = missed[0]; q = m.q; q.retry = true; pr.missed = pr.missed.filter(x => x !== m); saveProgress(pr); }
-  else q = GEN[ex](level);
+  else { q = GEN[ex](level); q.v = QV; }
   P = { q, picked: null, sel: [], result: null, hint: false };
 }
 Views.practice = () => {
@@ -2290,7 +2315,15 @@ actions.preset = () => { if (window.confirm('Reset all practice scores and the r
    Each generator returns { prompt, choices: [{v, l}], right, explain, fb?, box?, play? }; the answer is hidden until the learner picks. */
 const TQ = { q: null, ctx: null, view: null, picked: null };
 const qScores = () => { const d = Store.get('gte.tabquiz', {}); return d && typeof d === 'object' ? d : {}; };
-const twelve = (pref = flatPref()) => range0(0, 11).map(pc => ({ v: String(pc), l: T.pcName(pc, pref) }));
+/* Pitch questions (any spelling is right): twelve buttons, each labelled with both spellings so no label implies a wrong letter. */
+const twelve = (pref = 'both') => range0(0, 11).map(pc => ({ v: String(pc), l: T.pcName(pc, pref) }));
+/* Spelling questions (the letter matters): the right note, its enharmonic twins and same-letter neighbours. Graded by name. */
+function spelled(note, n = 6) {
+  const pool = [T.spellWithLetter(note.l + 1, note.pc), T.spellWithLetter(note.l + 6, note.pc)].filter(x => Math.abs(x.a) <= 2).map(x => x.name)
+    .concat([-1, 1].filter(d => Math.abs(note.a + d) <= 2).map(d => T.makeNote(note.l, note.a + d).name), [T.makeNote((note.l + 1) % 7, 0).name, T.makeNote((note.l + 6) % 7, 0).name]);
+  return asChoices(uniq(pool).filter(x => x !== note.name), n, note.name);
+}
+const spellNote = n => ` The letter is ${esc(T.LETTERS[n.l])}, so it is written ${esc(n.name)}.`;
 const asChoices = (list, n = 4, right) => (n ? choicesFrom(right, list.filter(x => x !== right), n) : list).map(x => ({ v: x, l: x }));
 const uniq = a => [...new Set(a)];
 const pickN = (right, pool, n = 4) => asChoices(uniq(pool), n, right);
@@ -2328,7 +2361,7 @@ const QUIZ = {
         const nm = (notes.find(n => n.pc === pc) || { name: T.pcName(pc, flatPref()) }).name; const yes = inPcs.includes(pc);
         return { prompt: `Is <b>${esc(nm)}</b> in <b>${name}</b>?`, right: yes ? 'yes' : 'no', choices: [{ v: 'yes', l: 'Yes, it is in the scale' }, { v: 'no', l: 'No, it is outside' }], explain };
       }
-      return { prompt: `In <b>${name}</b>, what note is degree <b>${esc(sc.degrees[i])}</b>?`, right: String(notes[i].pc), choices: twelve(), explain };
+      return { prompt: `In <b>${name}</b>, what note is degree <b>${esc(sc.degrees[i])}</b>?`, right: notes[i].name, choices: spelled(notes[i]), explain: explain + spellNote(notes[i]) };
     }
   },
   intervals: {
@@ -2338,8 +2371,8 @@ const QUIZ = {
       const r = rootNote(); const iv = rnd(T.INTERVALS.filter(x => x.semis > 0 && x.semis <= 12 && (mode !== 'semis' || !['A2', 'A5', 'd7', 'A4'].includes(x.abbr))));
       const top = T.degreeNote(r, iv.degree), base = nearMidi(r.pc, 48), play = [base, base + iv.semis];
       const explain = `${iv.semis} semitone${iv.semis === 1 ? '' : 's'} = ${esc(iv.name)} (${esc(iv.abbr)}): <b>${esc(S.root)} → ${esc(top.name)}</b>.`;
-      if (mode === 'name') return { prompt: `What note is a <b>${esc(iv.name.replace(/ \(.*\)/, ''))}</b> above <b>${esc(S.root)}</b>?`, play, right: String(top.pc), choices: twelve(), explain };
-      if (mode === 'count') return { prompt: `How many semitones from <b>${esc(S.root)}</b> up to <b>${esc(top.name)}</b>?`, play, right: String(iv.semis), choices: range0(1, 12).map(n => ({ v: String(n), l: String(n) })), explain };
+      if (mode === 'name') return { prompt: `What note is ${/^[AEIOU]/.test(iv.name) ? 'an' : 'a'} <b>${esc(iv.name.replace(/ \(.*\)/, ''))}</b> above <b>${esc(S.root)}</b>?`, play, right: top.name, choices: spelled(top), explain: explain + spellNote(top) };
+      if (mode === 'count') return { prompt: `How many semitones from <b>${esc(S.root)}</b> up to <b>${esc(top.name)}</b>${iv.semis === 12 ? ' (one octave higher)' : ''}?`, play, right: String(iv.semis), choices: range0(1, 12).map(n => ({ v: String(n), l: String(n) })), explain };
       return { prompt: `Start on <b>${esc(S.root)}</b> and go up <b>${iv.semis} semitone${iv.semis === 1 ? '' : 's'}</b>. Which note do you land on?`, play, right: String(top.pc), choices: twelve(), explain };
     }
   },
@@ -2349,12 +2382,12 @@ const QUIZ = {
     make(mode) {
       const r = rootNote(), c = T.getChord(S.chord), notes = T.chordNotes(r, c), sym = T.chordSymbol(r, c); const k = 1 + Math.floor(Math.random() * (notes.length - 1)); const d = c.degrees[k];
       const explain = `${esc(sym)} = ${esc(noteNames(notes))} (${esc(c.degrees.join(' '))}).`;
-      if (mode === 'semis') return { prompt: `How many semitones above the root is the <b>${esc(d)}</b>?`, right: String(T.degreeSemis(d)), choices: uniq(c.degrees.slice(1).map(T.degreeSemis).concat(range0(1, 11))).slice(0, 8).sort((a, b) => a - b).map(n => ({ v: String(n), l: String(n) })), explain: `${esc(d)} = ${T.degreeSemis(d)} semitones. ${explain}` };
+      if (mode === 'semis') return { prompt: `How many semitones above the root is the <b>${esc(d)}</b>?`, right: String(T.degreeSemis(d)), choices: uniq(c.degrees.slice(1).map(T.degreeSemis).concat(range0(1, 11))).filter(n => !(T.degreeSemis(d) > 12 && n === T.degreeSemis(d) - 12)).slice(0, 8).sort((a, b) => a - b).map(n => ({ v: String(n), l: String(n) })), explain: `${esc(d)} = ${T.degreeSemis(d)} semitones${T.degreeSemis(d) > 12 ? ` (an octave + ${T.degreeSemis(d) - 12}: extensions are counted above the octave)` : ''}. ${explain}` };
       if (mode === 'spell') {
-        const right = noteNames(notes); const wrong = T.CHORDS.filter(x => x.id !== c.id && x.degrees.length === c.degrees.length).map(x => noteNames(T.chordNotes(r, x)));
+        const right = noteNames(notes); const sameSize = T.CHORDS.filter(x => x.id !== c.id && x.degrees.length === c.degrees.length); const wrong = (sameSize.length >= 3 ? sameSize : T.CHORDS.filter(x => x.id !== c.id && Math.abs(x.degrees.length - c.degrees.length) <= 1)).map(x => noteNames(T.chordNotes(r, x)));
         return { prompt: `Spell <b>${esc(sym)}</b> (formula ${esc(c.degrees.join(' '))}).`, right, choices: pickN(right, wrong.filter(w => w !== right)), explain };
       }
-      return { prompt: `What is the <b>${esc(d)}</b> of <b>${esc(sym)}</b>?`, right: String(notes[k].pc), choices: twelve(), explain };
+      return { prompt: `What is the <b>${esc(d)}</b> of <b>${esc(sym)}</b>?`, right: notes[k].name, choices: spelled(notes[k]), explain: explain + spellNote(notes[k]) };
     }
   },
   finder: {
@@ -2388,7 +2421,7 @@ const QUIZ = {
       const r = rootNote(), c = T.getChord(S.invChord), notes = T.chordNotes(r, c), sym = T.chordSymbol(r, c); const n = Math.min(4, notes.length);
       const names = ['Root position', '1st inversion', '2nd inversion', '3rd inversion'].slice(0, n); const i = Math.floor(Math.random() * n); const order = T.inversionOrder(notes, i);
       const explain = `${esc(names[i])} puts the ${esc(T.inversionOrder(c.degrees, i)[0])} (${esc(order[0].name)}) in the bass: ${esc(sym)}${i ? '/' + esc(order[0].name) : ''}.`;
-      if (mode === 'bass') return { prompt: `What is the bass note of <b>${esc(sym)}</b> in <b>${esc(names[i].toLowerCase())}</b>?`, right: String(order[0].pc), choices: twelve(), explain };
+      if (mode === 'bass') return { prompt: `What is the bass note of <b>${esc(sym)}</b> in <b>${esc(names[i].toLowerCase())}</b>?`, right: order[0].name, choices: spelled(order[0]), explain };
       return { prompt: `<b>${esc(sym)}</b> voiced low to high as <b>${esc(noteNames(order))}</b>. Which inversion is it?`, right: names[i], choices: asChoices(names, 0), explain };
     }
   },
@@ -2450,7 +2483,7 @@ const QUIZ = {
     make(mode) {
       const r = rootNote();
       if (mode === 'borrow') { const b = T.borrowedChords(r); const x = rnd(b); return { prompt: `In <b>${esc(S.root)} major</b>, which chord is <b>${esc(x.roman)}</b> borrowed from ${esc(S.root)} minor?`, right: x.symbol, choices: pickN(x.symbol, b.map(y => y.symbol).concat(T.diatonicChords(r).map(y => y.triad.symbol))), explain: `${esc(x.roman)} = ${esc(x.symbol)} (${esc(noteNames(x.notes))}).` }; }
-      if (mode === 'tri') { const d = T.parseNote(rnd(ROOTS_BY_LEVEL.intermediate)); const s = T.tritoneSub(d); return { prompt: `What is the tritone substitute for <b>${esc(d.name)}7</b>?`, right: String(s.root.pc), choices: twelve(), explain: `${esc(s.symbol)}: a tritone (6 semitones) from ${esc(d.name)}, sharing the 3rd and ♭7.` }; }
+      if (mode === 'tri') { const d = T.parseNote(rnd(ROOTS_BY_LEVEL.intermediate)); const s = T.tritoneSub(d); return { prompt: `What is the tritone substitute for <b>${esc(d.name)}7</b>? (Its root note.)`, right: s.root.name, choices: spelled(s.root), explain: `${esc(s.symbol)}: a tritone (6 semitones) from ${esc(d.name)}, sharing the 3rd and ♭7.` }; }
       const sd = T.secondaryDominants(r); const x = rnd(sd);
       return { prompt: `In <b>${esc(S.root)} major</b>, what is <b>${esc(x.label)}</b> (the dominant that leads to ${esc(x.target)})?`, right: x.symbol, choices: pickN(x.symbol, sd.map(y => y.symbol).concat(T.diatonicChords(r).map(y => y.root.name + '7'))), explain: `${esc(x.symbol)} is a 5th above ${esc(x.target)}: ${esc(noteNames(x.notes))}.` };
     }
@@ -2581,7 +2614,7 @@ const LEARN = {
   'h-borrow': { what: 'Modal interchange borrows chords from the parallel minor key.', why: 'Borrowed chords add a darker colour without leaving the key.', where: 'Rock (♭VII), pop ballads (iv), film music (♭VI).', how: r => `In ${esc(r.name)} major, iv = ${esc(T.chordSymbol(T.degreeNote(r, '4'), 'min'))} comes from ${esc(r.name)} minor.`, tip: 'IV → iv → I is a classic sad, warm ending.', see: [] },
   'h-tri': { what: 'Tritone substitution replaces a dominant 7th with the dominant 7th a tritone away.', why: 'Both chords share the same tritone, so they resolve the same way, with a chromatic bass line.', where: 'Jazz and bossa nova turnarounds.', how: () => 'G7 (B and F) and D♭7 (F and C♭ = B) share the same tritone, so D♭7 can replace G7 before C.', tip: '', see: [['tip:ivgroups', 'Tritone']] },
   'h-spell': { what: 'Rules for spelling chord notes with the right letter names.', why: 'Correct spelling makes charts readable and shows each note’s function.', where: 'Writing charts, notation, theory.', how: () => 'One letter per chord degree: E7♯9 is E G♯ B D F𝄪, not G.', tip: '', see: [['tip:reference', 'Enharmonic spelling']] },
-  'b-notes': { what: 'Every note on frets 0–12 in standard tuning.', why: 'Note names are the base for every scale, chord and interval.', where: 'Finding roots for barre chords and scales, reading tab.', how: () => 'Natural notes are a whole step apart except B–C and E–F, which are a half step (one fret).', tip: 'Fret 12 repeats the open string; frets 5 and 7 give the next strings’ notes.', see: [['tip:fretboard', 'Fretboard shortcuts']] },
+  'b-notes': { what: 'Every note on frets 0–12 in standard tuning.', why: 'Note names are the base for every scale, chord and interval.', where: 'Finding roots for barre chords and scales, reading tab.', how: () => 'Natural notes are a whole step apart except B–C and E–F, which are a half step (one fret).', tip: 'Fret 12 repeats the open string. Fret 5 matches the next higher open string (fret 4 on the G string), and fret 7 is the next lower string’s note an octave up (fret 8 on the B string).', see: [['tip:fretboard', 'Fretboard shortcuts']] },
   'b-enh': { what: 'Enharmonic notes sound the same but are written with different letters.', why: 'The key decides the spelling, and the right spelling shows the note’s function.', where: 'Reading key signatures, spelling scales and chords.', how: () => 'F♯ and G♭ are the same pitch. In D major it is F♯ (each letter once); in D♭ major it is G♭.', tip: 'Never assume two spellings are interchangeable in theory: C–F♯ is an augmented 4th, C–G♭ a diminished 5th.', see: [] }
 };
 
@@ -2864,7 +2897,7 @@ GEN.quality = level => {
   if (type === 'name') {
     const pool = T.qualitiesFor(n).map(qq => T.intervalAbove(root, n, qq)).filter(Boolean).concat(same); const whyWrong = {};
     pool.forEach(y => { if (y.abbr === x.abbr) return; whyWrong[y.abbr] = y.number !== n ? `${y.abbr} has the same ${x.semis} semitones, but it would be spelled ${esc(y.note.name)} (letters ${esc(letterSpan(root, y.number))}).` : `${y.abbr} would be ${y.semis} semitones (${esc(y.note.name)}); ${esc(root.name)} → ${esc(x.note.name)} is ${x.semis}.`; });
-    return { kind: 'choice', prompt: `What is the interval from <b>${esc(root.name)}</b> up to <b>${esc(x.note.name)}</b>?`, audio: [T.midiOf(root, 3), T.midiOf(root, 3) + x.semis], right: x.abbr, choices: choicesFrom(x.abbr, Object.keys(whyWrong)), explain: `Letters ${esc(letterSpan(root, n))} = ${ORD_SHORT[n]}; ${x.semis} semitones = ${esc(x.name.toLowerCase())}.`, whyWrong, hint: 'Count letters first (the number), then semitones (the quality).', spec };
+    return { kind: 'choice', prompt: `What is the interval from <b>${esc(root.name)}</b> up to <b>${esc(x.note.name)}</b>${octaveHint(n)}?`, audio: [T.midiOf(root, 3), T.midiOf(root, 3) + x.semis], right: x.abbr, choices: choicesFrom(x.abbr, Object.keys(whyWrong)), explain: `Letters ${esc(letterSpan(root, n))} = ${ORD_SHORT[n]}; ${x.semis} semitones = ${esc(x.name.toLowerCase())}.`, whyWrong, hint: 'Count letters first (the number), then semitones (the quality).', spec };
   }
   const whyWrong = {}; const alt = T.pcName(x.note.pc, x.note.a > 0 ? 'flat' : 'sharp');
   if (alt !== x.note.name) whyWrong[alt] = `${esc(alt)} is the same fret, but its letter makes it a different interval${same.find(y => y.note.name === alt) ? ' (' + esc(same.find(y => y.note.name === alt).abbr) + ')' : ''}.`;

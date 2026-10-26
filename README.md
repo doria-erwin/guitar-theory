@@ -60,7 +60,7 @@ Scales, chords, progressions and tunings are data tables in `theory.js`. Positio
 
 ```
 node build.js                      # writes dist/index.html
-node --test tests/theory.test.js   # 35 engine tests
+node --test tests/*.test.js        # 39 engine tests + quiz audit (thousands of seeded questions)
 python3 tests/e2e.py               # browser tests (pip install playwright; playwright install chromium)
 ```
 

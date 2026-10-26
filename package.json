@@ -5,7 +5,7 @@
   "description": "Offline, single-file guitar music theory explorer",
   "scripts": {
     "build": "node build.js",
-    "test": "node --test tests/theory.test.js",
+    "test": "node --test tests/*.test.js",
     "test:e2e": "node build.js && python3 tests/e2e.py"
   }
 }
