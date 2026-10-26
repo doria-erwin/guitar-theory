@@ -117,6 +117,7 @@ Views.intervals = () => {
     <ul class="compact">${pairs}</ul>
     ${fretboardBlock('interval', markers, { min: 0, max: 15, fixedRange: true, spell: speller([r, target]) })}
     <p class="legend"><i class="lg root"></i>${esc(S.root)} <i class="lg tone"></i>${esc(target.name)}</p>`)
+    + qualityExplorer() + qualityLesson()
     + card('Interval calculator', `
     ${learn('iv-calc')}
     <p class="muted">Pick two spelled notes. Enharmonic spellings give different interval names for the same sound.</p>

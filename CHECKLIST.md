@@ -72,4 +72,6 @@ Tests: **U** = engine unit test (`tests/theory.test.js`), **E** = browser test (
 | What / Why / Where / How / Tip on every tab and main section | Done | All tabs | E (every tab has an intro; panels expand; no undefined/NaN with roots A, E♭, F♯) |
 | Practice hints | Done | Practice → Show hint | E |
 | Existing settings and practice progress kept | Done | — | E (pre-seeded settings and stats survive reload and new drills) |
-
+| Interval qualities: two families, explorer, fretboard, enharmonic intervals | Done | Intervals → Interval qualities explorer, Why interval qualities exist; `T.intervalAbove`, `T.qualitiesFor` | U (every root × number × quality agrees with the interval calculator; one semitone per step; no d1; C–D♯/C–E♭, C–F♯/C–G♭; D♭→G = A4, C♯→G = d5), E (explorer: result, ladder and fretboard distance for 7 roots × all numbers × qualities) |
+| Interval quality reference tables (perfect, major/minor, every name 0–13) | Done | Intervals → Why interval qualities exist | E |
+| Interval quality drills with per-answer explanations | Done | Practice → Interval qualities | E (every wrong choice has an explanation; 3 levels; old scores kept) |
