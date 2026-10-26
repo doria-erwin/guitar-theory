@@ -20,7 +20,7 @@ const DEFAULTS = {
   chord: 'm7', voicing: 0, finder: [], finderBass: null, invChord: 'maj', inv: 0,
   arp: 'maj7', arpPos: 'all', prog: 'pop', tempo: 90, beatsPerChord: 4, loop: true, met: { sig: '4/4', sub: 1, on: false },
   intA: { n: 'C', o: 4 }, intB: { n: 'E', o: 4 }, intRow: 'M3', cof: 0,
-  practice: { ex: 'note', level: 'beginner' }, quizOpen: true, quizMode: {}
+  practice: { ex: 'note', level: 'beginner' }, quizOpen: true, quizMode: {}, iqNum: 3, iqQual: 'm'
 };
 const VALID = {
   view: ['fretboard', 'intervals', 'scales', 'builder', 'finder', 'shapes', 'inversions', 'arpeggios', 'keys', 'progressions', 'rhythm', 'techniques', 'harmony', 'tips', 'practice', 'basics'],
@@ -44,7 +44,8 @@ function loadState() {
   const clampInt = (v, a, b, d) => Number.isFinite(v) ? Math.min(b, Math.max(a, Math.round(v))) : d;
   s.fbMin = clampInt(s.fbMin, 0, 23, 0); s.fbMax = clampInt(s.fbMax, s.fbMin + 1, 24, 15);
   s.tempo = clampInt(s.tempo, 30, 260, 90); s.cof = clampInt(s.cof, 0, 11, 0); s.inv = clampInt(s.inv, 0, 3, 0); s.voicing = clampInt(s.voicing, 0, 20, 0);
-  s.beatsPerChord = clampInt(s.beatsPerChord, 1, 8, 4);
+  s.beatsPerChord = clampInt(s.beatsPerChord, 1, 8, 4); s.iqNum = clampInt(s.iqNum, 1, 8, 3);
+  if (!['d', 'm', 'M', 'P', 'A'].includes(s.iqQual)) s.iqQual = 'm';
   if (!s.met || typeof s.met !== 'object') s.met = Object.assign({}, DEFAULTS.met);
   s.met.on = false;
   if (!s.quizMode || typeof s.quizMode !== 'object' || Array.isArray(s.quizMode)) s.quizMode = {};

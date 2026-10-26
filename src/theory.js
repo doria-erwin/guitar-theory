@@ -95,6 +95,26 @@
     return { number, semis, quality: q, abbr: qa + number, name, simple, compound: number > 8 };
   }
 
+  /* Interval qualities per number: perfect family (1 4 5 8) = d P A; major/minor family (2 3 6 7) = d m M A.
+     Offsets are semitones from the perfect or major size. A diminished unison would be smaller than nothing, so it is not offered. */
+  const QUALITY_OFFSETS = { perfect: { d: -1, P: 0, A: 1 }, major: { d: -2, m: -1, M: 0, A: 1 } };
+  const QUALITY_NAMES = { d: 'Diminished', m: 'Minor', M: 'Major', P: 'Perfect', A: 'Augmented' };
+  function intervalFamily(number) { return [1, 4, 5].includes(((number - 1) % 7) + 1) ? 'perfect' : 'major'; }
+  function qualitiesFor(number) { const q = Object.keys(QUALITY_OFFSETS[intervalFamily(number)]); return number === 1 ? q.filter(x => x !== 'd') : q; }
+  /* The note a given interval above root, spelled with the right letter. null if the quality is not valid for that number
+     or the spelling would need more than a double sharp or flat. */
+  function intervalAbove(root, number, quality) {
+    const r = typeof root === 'string' ? parseNote(root) : root;
+    if (!qualitiesFor(number).includes(quality)) return null;
+    const simple = ((number - 1) % 7) + 1;
+    const semis = MAJOR_STEPS[simple - 1] + 12 * Math.floor((number - 1) / 7) + QUALITY_OFFSETS[intervalFamily(number)][quality];
+    const l = (r.l + number - 1) % 7;
+    let a = mod(r.pc + semis - NAT[l]); if (a > 6) a -= 12;
+    if (Math.abs(a) > 2) return null;
+    const note = makeNote(l, a); const q = qualify(number, semis);
+    return { note, semis, abbr: q.abbr, name: q.name, quality, number };
+  }
+
   /* Invert a simple interval within the octave: numbers add to 9, qualities swap (M↔m, A↔d, P stays), semitones add to 12. */
   function invertInterval(iv) {
     const i = typeof iv === 'string' ? INTERVALS.find(x => x.abbr === iv) : iv;
@@ -599,7 +619,7 @@
 
   return {
     LETTERS, NAT, MAJOR_STEPS, ROOTS, SCALES, CHORDS, INTERVALS, TUNINGS, PROGRESSIONS, MAJOR_KEYS, CIRCLE, MODE_NAMES, MODE_FEEL, OPEN, MOVABLE, MAX_FRET, STRING_SETS, CAGED_MAJOR,
-    mod, parseNote, makeNote, spellWithLetter, pcName, parseDegree, degreeSemis, degreeNote, transpose, majorScale, intervalBetween, qualify, invertInterval, midiOf,
+    mod, parseNote, makeNote, spellWithLetter, pcName, parseDegree, degreeSemis, degreeNote, transpose, majorScale, intervalBetween, qualify, invertInterval, intervalAbove, qualitiesFor, intervalFamily, QUALITY_NAMES, midiOf,
     getScale, scaleNotes, stepPattern, modeParent, getChord, chordNotes, chordSymbol, chordPcs, identifyChord, keySignature, relativeMinor, relativeMajor,
     prefersFlats, diatonicChords, progressionChords, customTuning, scalePositions, arpeggioPositions, fretboardNotes, chordVoicings, physicallyValid, detectBarre,
     inversionOrder, inversionVoicings, secondaryDominants, tritoneSub, borrowedChords, walkWindow, walkPerString

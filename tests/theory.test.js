@@ -251,3 +251,33 @@ test('Octave shapes in standard tuning: +2 frets two strings up, +3 when crossin
   assert.deepEqual([[0, 2], [1, 3], [2, 4], [3, 5]].map(([a, b]) => 12 - (m[b] - m[a])), [2, 2, 3, 3]);
   assert.equal(m[4] - m[3], 4); [[0, 1], [1, 2], [2, 3], [4, 5]].forEach(([a, b]) => assert.equal(m[b] - m[a], 5));
 });
+
+/* ---------- Interval qualities ---------- */
+test('Interval families: 1 4 5 8 = d P A (no d1); 2 3 6 7 = d m M A; one semitone per step', () => {
+  assert.deepEqual(T.qualitiesFor(1), ['P', 'A']);
+  for (const n of [4, 5, 8]) assert.deepEqual(T.qualitiesFor(n), ['d', 'P', 'A']);
+  for (const n of [2, 3, 6, 7]) assert.deepEqual(T.qualitiesFor(n), ['d', 'm', 'M', 'A']);
+  for (const n of [1, 2, 3, 4, 5, 6, 7, 8]) { const s = T.qualitiesFor(n).map(q => T.intervalAbove('C', n, q).semis); s.slice(1).forEach((x, i) => assert.equal(x - s[i], 1, 'step ' + n)); }
+  assert.equal(T.intervalAbove('C', 3, 'P'), null); assert.equal(T.intervalAbove('C', 5, 'M'), null); assert.equal(T.intervalAbove('C', 1, 'd'), null);
+});
+test('Interval qualities: spelling matches the interval calculator for every root, number and quality', () => {
+  let checked = 0;
+  for (const r of T.ROOTS) for (let n = 1; n <= 8; n++) for (const q of T.qualitiesFor(n)) {
+    const x = T.intervalAbove(r, n, q); if (!x) continue;
+    const root = T.parseNote(r); assert.equal(x.note.l, (root.l + n - 1) % 7, `${r} ${q}${n} letter`);
+    const o = [4, 5].find(o2 => T.midiOf(x.note, o2) - T.midiOf(root, 4) === x.semis);
+    assert.ok(o, `${r} ${q}${n} octave`);
+    const res = T.intervalBetween(root, 4, x.note, o); assert.equal(res.abbr, q + n, `${r} → ${x.note.name}`); assert.equal(res.semis, x.semis); checked++;
+  }
+  assert.ok(checked > 400);
+});
+test('Interval qualities: examples, enharmonic pairs, and accidentals that do not match the quality', () => {
+  const nm = (r, n, q) => T.intervalAbove(r, n, q).note.name;
+  assert.equal(nm('C', 2, 'A'), 'D♯'); assert.equal(nm('C', 3, 'm'), 'E♭'); assert.equal(nm('C', 4, 'A'), 'F♯'); assert.equal(nm('C', 5, 'd'), 'G♭');
+  assert.equal(T.intervalAbove('C', 2, 'A').semis, T.intervalAbove('C', 3, 'm').semis);
+  assert.equal(T.intervalAbove('C', 4, 'A').semis, 6); assert.equal(T.intervalAbove('C', 5, 'd').semis, 6);
+  assert.equal(nm('D♭', 4, 'A'), 'G'); assert.equal(nm('C♯', 5, 'd'), 'G'); // augmented without ♯, diminished without ♭
+  assert.equal(nm('C', 3, 'd'), 'E𝄫'); assert.equal(nm('C♯', 5, 'A'), 'G𝄪'); assert.equal(nm('C', 7, 'd'), 'B𝄫');
+  assert.equal(T.intervalAbove('A♯', 3, 'A'), null); // would need a triple sharp
+  assert.equal(T.intervalAbove('C', 8, 'A').semis, 13); assert.equal(nm('C', 8, 'd'), 'C♭');
+});

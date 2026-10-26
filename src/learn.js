@@ -119,7 +119,7 @@ const TIPS = {
         <dt>P1 and P8</dt><dd>P1 = unison (the same note, 0 semitones). P8 = octave (the same letter, 12 semitones higher).</dd>
         <dt>Root vs tonic</dt><dd>The <b>tonic</b> is the home note of a key or scale. The <b>root</b> is the note a chord is built on. In C major, the G chord has root G, but the key’s tonic is still C.</dd>
         <dt>Number vs quality</dt><dd>The <b>number</b> comes from counting letter names (C–E = 3rd). The <b>quality</b> comes from semitones (4 = major, 3 = minor). C–E and C–E♭ are both 3rds, with different qualities.</dd>
-        <dt>Qualities</dt><dd><b>Perfect</b>: unison, 4th, 5th, octave. <b>Major/minor</b>: 2nds, 3rds, 6ths, 7ths (minor = one semitone smaller). <b>Augmented</b>: one semitone larger than perfect or major. <b>Diminished</b>: one semitone smaller than perfect or minor.</dd>
+        <dt>Qualities</dt><dd><b>Perfect</b>: unison, 4th, 5th, octave. <b>Major/minor</b>: 2nds, 3rds, 6ths, 7ths (minor = one semitone smaller). <b>Augmented</b>: one semitone larger than perfect or major. <b>Diminished</b>: one semitone smaller than perfect or minor. <button type="button" class="btn small ghost" data-act="goiq">Explore interval qualities</button></dd>
         <dt>Enharmonic spelling</dt><dd>C–D♯ (A2) and C–E♭ (m3) are both 3 semitones but different intervals, because the letters differ. Choose the spelling that fits the key or chord.</dd>
       </dl><p><button type="button" class="btn small" data-view="intervals">Open the interval table and calculator</button></p>`;
   },

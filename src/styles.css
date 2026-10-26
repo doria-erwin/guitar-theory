@@ -242,6 +242,20 @@ pre.tab { font: 13px/1.35 ui-monospace, "SF Mono", Menlo, Consolas, monospace; b
 .feedback.ok, p.ok { color: var(--ok); } .feedback.bad, p.bad { color: var(--bad); }
 .feedback { background: var(--panel2); }
 .score { color: var(--muted); font-size: 14px; }
+/* Interval qualities */
+.ladders { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.ladder { display: flex; align-items: stretch; gap: 4px; }
+.rung { flex: 1 1 0; min-width: 0; max-width: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 6px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel2); cursor: pointer; line-height: 1.25; }
+.rung b { font-size: 18px; } .rung span { font-size: 12px; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; } .rung em { font-style: normal; font-size: 12px; color: var(--muted); }
+.rung:hover { border-color: var(--accent); }
+.rung.is-on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); } .rung.is-on span, .rung.is-on em { color: var(--accent-ink); }
+.rung.is-na { opacity: .55; }
+.ladder .step { align-self: center; font-style: normal; font-size: 11px; color: var(--muted); white-space: nowrap; }
+.ladder-cap { margin: 4px 0 0; }
+.iq-ruler .semi { width: 46px; } .iq-ruler .semi.is-sel { box-shadow: 0 0 0 2px var(--accent); } .iq-ruler .semi.is-root small { color: rgba(255, 255, 255, .85); }
+.fam-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.seq.big { font-size: 18px; font-weight: 700; margin: 4px 0; }
+.feedback .why { display: block; margin: 4px 0; }
 /* Learning layer */
 .learn { border: 1px solid var(--line); border-left: 3px solid var(--tone); border-radius: var(--r-sm); background: var(--panel2); margin: 8px 0 12px; font-size: 15px; }
 .learn > summary { cursor: pointer; padding: 8px 12px; list-style: none; line-height: 1.45; }
